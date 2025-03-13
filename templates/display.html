@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uploaded Sudoku</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Your Uploaded Sudoku</h1>
+        <img src="{{ url_for('uploaded_file', filename=filename) }}" alt="Uploaded Sudoku">
+        <br>
+        <a href="/">Upload Another</a>
+    </div>
+</body>
+</html>

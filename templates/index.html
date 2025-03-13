@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sudoku Solver</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to Sudoku Solver</h1>
+        <p>Upload an image of an unsolved Sudoku puzzle, and let AI solve it for you!</p>
+
+        <form action="/upload" method="post" enctype="multipart/form-data">
+            <input type="file" name="file" required>
+            <button type="submit">Upload Sudoku</button>
+        </form>
+        <img src="{{ url_for('static', filename='logo_1.jpg') }}" alt="Logo" class="bottom-left-image">
+    </div>
+</body>
+</html>
+
