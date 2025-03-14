@@ -1,7 +1,6 @@
 body {
     text-align: center;
     background-color: #FFA07A; /* Light orange color */
-    background-image: url('sudoku_bg.jpg'); /* Optional */
     background-size: cover;
     color: #333;
     font-family: 'Playfair Display', serif;

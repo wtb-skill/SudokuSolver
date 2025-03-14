@@ -3,7 +3,7 @@ from skimage.segmentation import clear_border
 import numpy as np
 import imutils
 import cv2
-
+import os
 
 def find_puzzle(image, debug=False):
     # Since color is not needed for edge detection, the image is converted to grayscale to simplify processing
@@ -74,6 +74,23 @@ def find_puzzle(image, debug=False):
 
     # return a 2-tuple of puzzle in both RGB and grayscale
     return (puzzle, warped)
+
+
+def create_warped_image(file_path):
+    # Fixed name for the warped image
+    warped_filename = 'warped_sudoku_board.jpg'
+    warped_image_path = os.path.join('uploads', warped_filename)
+
+    # Read the uploaded image
+    image = cv2.imread(file_path)
+
+    # Call your find_puzzle function to get the warped image
+    puzzle, warped = find_puzzle(image)
+
+    # Save the warped image (this will overwrite the previous one)
+    cv2.imwrite(warped_image_path, warped)
+
+    return warped_filename  # Return the fixed filename
 
 def extract_digit(cell, debug=False):
     # Apply automatic thresholding to the cell and then clear any

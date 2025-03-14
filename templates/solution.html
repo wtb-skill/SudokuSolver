@@ -14,13 +14,15 @@
         <div class="image-container">
             <h3>Uploaded Image</h3>
             <div class="image-box">
+                <!-- Display the uploaded image -->
                 <img src="{{ url_for('main.uploaded_file', filename=filename) }}" alt="Uploaded Sudoku">
             </div>
         </div>
         <div class="image-container">
             <h3>Processed Image</h3>
             <div class="image-box">
-                <img src="{{ url_for('static', filename='placeholder.png') }}" alt="Processed Image">
+                <!-- Display the warped image -->
+                <img src="{{ url_for('main.uploaded_file', filename='warped_sudoku_board.jpg') }}" alt="Warped Image">
             </div>
         </div>
         <div class="image-container">

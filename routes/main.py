@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, send_from_directory
+from modules.image_processing import create_warped_image
 import os
 
 # Initialize Blueprint
@@ -24,17 +25,19 @@ def upload_file():
         return redirect(request.url)
 
     if file:
+        # Save the uploaded file to the 'uploads' folder
         file_path = os.path.join('uploads/', file.filename)
         file.save(file_path)
-        return redirect(url_for('main.display_image', filename=file.filename))
+
+        # Call the new helper function to process and save the warped image
+        warped_image_path = create_warped_image(file_path)
+
+        # Pass both the uploaded image filename and warped image filename to the template
+        return render_template('solution.html', filename=file.filename,
+                               warped_filename=warped_image_path.split('/')[-1])
 
 
-@main_bp.route('/display/<filename>')
-def display_image(filename):
-    return render_template('solution.html', filename=filename)
-
-
-# Serve uploaded files properly
+# Serve uploaded files properly from the 'uploads' directory
 @main_bp.route('/uploads/<filename>')
 def uploaded_file(filename):
-    return send_from_directory('uploads/', filename)
+    return send_from_directory('uploads', filename)
