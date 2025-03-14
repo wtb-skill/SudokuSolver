@@ -1,0 +1,90 @@
+body {
+    text-align: center;
+    background-color: #FFA07A; /* Light orange color */
+    background-image: url('sudoku_bg.jpg'); /* Optional */
+    background-size: cover;
+    color: #333;
+    font-family: 'Playfair Display', serif;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+/* Main content box */
+.container {
+    margin-top: 50px;
+    padding: 20px;
+    background: #FFFFE0; /* Light yellow color */
+    display: inline-block;
+    border-radius: 10px;
+    border: 5px solid #DAA520; /* Darker golden border */
+    box-shadow: 0px 15px 25px rgba(0, 0, 0, 0.2); /* Stronger shadow for more depth */
+}
+
+/* Upload button */
+button {
+    background-color: #87CEFA; /* Light blue */
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    margin-top: 10px;
+    cursor: pointer;
+    border-radius: 25px; /* Rounded shape */
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #5dade2; /* Slightly darker blue on hover */
+}
+
+/* Image styling */
+img {
+    max-width: 180%; /* Double the size */
+    margin-top: 10px;
+    border-radius: 5px;
+}
+
+/* Grid for displaying images */
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    width: 80vw;
+    margin-top: 30px;
+    justify-content: center;
+    align-items: center;
+}
+
+.image-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.image-container h3 {
+    margin-bottom: 8px;
+    font-size: 1.2rem;
+}
+
+.image-box {
+    width: 100%;
+    max-width: 400px;
+    max-height: 400px;
+    background-color: #ddd;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 2px solid #000;
+    overflow: hidden;
+}
+
+.image-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}

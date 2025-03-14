@@ -31,7 +31,7 @@ def upload_file():
 
 @app.route('/display/<filename>')
 def display_image(filename):
-    return render_template('display.html', filename=filename)
+    return render_template('solution.html', filename=filename)
 
 
 # Serve uploaded files properly

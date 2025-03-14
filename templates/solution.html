@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sudoku Solution</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display&family=Merriweather&family=Cormorant+Garamond&family=Lora&family=Quicksand&display=swap" rel="stylesheet">
+</head>
+<body>
+    <a href="/" class="back-button">Upload Another Sudoku</a>
+
+    <div class="grid-container">
+        <div class="image-container">
+            <h3>Uploaded Image</h3>
+            <div class="image-box">
+                <img src="{{ url_for('uploaded_file', filename=filename) }}" alt="Uploaded Sudoku">
+            </div>
+        </div>
+        <div class="image-container">
+            <h3>Processed Image</h3>
+            <div class="image-box">
+                <img src="{{ url_for('uploaded_file', filename=filename) }}" alt="Processed Image">
+            </div>
+        </div>
+        <div class="image-container">
+            <h3>Sudoku After Digital Recognition</h3>
+            <div class="image-box">
+                <img src="{{ url_for('uploaded_file', filename=filename) }}" alt="Recognized Sudoku">
+            </div>
+        </div>
+        <div class="image-container">
+            <h3>Solved Sudoku</h3>
+            <div class="image-box">
+                <img src="{{ url_for('uploaded_file', filename=filename) }}" alt="Solved Sudoku">
+            </div>
+        </div>
+    </div>
+
+
+</body>
+</html>
