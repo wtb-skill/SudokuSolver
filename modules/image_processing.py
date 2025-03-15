@@ -75,7 +75,6 @@ def find_puzzle(image, debug=False):
     # return a 2-tuple of puzzle in both RGB and grayscale
     return (puzzle, warped)
 
-
 def create_warped_image(file_path):
     # Fixed name for the warped image
     warped_filename = 'warped_sudoku_board.jpg'
