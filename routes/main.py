@@ -1,6 +1,10 @@
 from flask import Blueprint, render_template, request, redirect, url_for, send_from_directory
-from modules.image_processing import create_warped_image
+from modules.image_processing import create_warped_image, show_cells
+from modules.digit_recognition import cells_to_digits
+from modules.board_display import draw_sudoku_board
 import os
+import cv2
+
 
 # Initialize Blueprint
 main_bp = Blueprint('main', __name__)
@@ -29,12 +33,28 @@ def upload_file():
         file_path = os.path.join('uploads/', file.filename)
         file.save(file_path)
 
-        # Call the new helper function to process and save the warped image
+        # Step 1: Warp the image to get a top-down view of the Sudoku grid
         warped_image_path = create_warped_image(file_path)
 
-        # Pass both the uploaded image filename and warped image filename to the template
-        return render_template('solution.html', filename=file.filename,
-                               warped_filename=warped_image_path.split('/')[-1])
+        # Step 2: Load the warped image
+        image = cv2.imread(warped_image_path, cv2.IMREAD_GRAYSCALE)
+        if image is None:
+            return "Error: Could not load the warped Sudoku image."
+
+        # Step 3: Extract Sudoku cells and recognize digits
+        puzzle_cells = show_cells(image, debug=False)
+
+        # Step 4: Convert extracted digits into a Sudoku board
+        board = cells_to_digits(puzzle_cells)
+
+        # Save a jpg of unsolved board
+        draw_sudoku_board(board, solved=False)
+
+        # Render solution.html with all required information
+        return render_template('solution.html',
+                               filename=file.filename,
+                               warped_filename=warped_image_path.split('/')[-1],
+                               board=board)
 
 
 # Serve uploaded files properly from the 'uploads' directory

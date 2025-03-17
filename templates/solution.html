@@ -28,13 +28,13 @@
         <div class="image-container">
             <h3>Sudoku After Digital Recognition</h3>
             <div class="image-box">
-                <img src="{{ url_for('static', filename='placeholder.png') }}" alt="Recognized Sudoku">
+                <img src="{{ url_for('main.uploaded_file', filename='sudoku_board_unsolved.jpg') }}" alt="Unsolved Sudoku">
             </div>
         </div>
         <div class="image-container">
             <h3>Solved Sudoku</h3>
             <div class="image-box">
-                <img src="{{ url_for('static', filename='placeholder.png') }}" alt="Solved Sudoku">
+                <img src="{{ url_for('main.uploaded_file', filename=filename) }}" alt="Solved Sudoku">
             </div>
         </div>
     </div>

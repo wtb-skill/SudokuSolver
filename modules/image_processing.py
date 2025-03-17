@@ -89,7 +89,7 @@ def create_warped_image(file_path):
     # Save the warped image (this will overwrite the previous one)
     cv2.imwrite(warped_image_path, warped)
 
-    return warped_filename  # Return the fixed filename
+    return warped_image_path  # Return the fixed filename
 
 def extract_digit(cell, debug=False):
     # Apply automatic thresholding to the cell and then clear any
@@ -136,7 +136,7 @@ def extract_digit(cell, debug=False):
     # Return the digit to the calling function
     return digit
 
-def show_cells(warped, grid_size=9, debug=False):
+def show_cells(warped, grid_size=9, debug=True):
     """
     Divides the Sudoku puzzle into cells and shows each cell for debugging.
 
@@ -152,8 +152,8 @@ def show_cells(warped, grid_size=9, debug=False):
     cell_height = h // grid_size
     cell_width = w // grid_size
 
-    # Loop through each cell and extract the digit
-    puzzle_digits = []
+    # Initialize storage for extracted digits
+    puzzle_cells = []
 
     for row in range(grid_size):
         row_digits = []
@@ -168,21 +168,47 @@ def show_cells(warped, grid_size=9, debug=False):
             cell = warped[y_start:y_end, x_start:x_end]
 
             # Extract the digit from the cell (if any)
-            digit = extract_digit(cell, debug=debug)
+            digit = extract_digit(cell, debug=False)
 
             # Append the extracted digit (None if no digit found)
             row_digits.append(digit)
 
-            # Show the cell for debugging (if debug flag is set)
-            if debug and digit is not None:
-                cv2.imshow(f"Cell ({row}, {col})", digit)
-                cv2.waitKey(0)
+        # Append the row's digits to the main puzzle_cells list
+        puzzle_cells.append(row_digits)
 
-        # Append the row's digits
-        puzzle_digits.append(row_digits)
+    # Debugging visualization
+    if debug:
+        grid_image = None
+        for row in range(grid_size):
+            row_cells = []
+            for col in range(grid_size):
+                cell = puzzle_cells[row][col]
+                if cell is not None:
+                    # Resize each digit image to a fixed size
+                    resized_cell = cv2.resize(cell, (50, 50))
+                    row_cells.append(resized_cell)
+                else:
+                    # If the cell is empty, create a blank image
+                    blank_cell = np.zeros((50, 50), dtype="uint8")
+                    row_cells.append(blank_cell)
+
+            # Horizontally concatenate the cells for each row
+            row_image = np.concatenate(row_cells, axis=1)
+
+            if grid_image is None:
+                grid_image = row_image
+            else:
+                # Vertically concatenate each row to form the grid
+                grid_image = np.concatenate([grid_image, row_image], axis=0)
+
+        # Show the entire grid of cells
+        cv2.imshow("Sudoku Puzzle Cells", grid_image)
+        cv2.waitKey(0)
 
     # Close any open image windows if debug is enabled
     if debug:
         cv2.destroyAllWindows()
 
-    return puzzle_digits
+    return puzzle_cells
+
+
