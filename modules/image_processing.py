@@ -89,7 +89,7 @@ def create_warped_image(file_path):
     # Save the warped image (this will overwrite the previous one)
     cv2.imwrite(warped_image_path, warped)
 
-    return warped_image_path  # Return the fixed filename
+    return warped_image_path  # Return the fixed path
 
 def extract_digit(cell, debug=False):
     # Apply automatic thresholding to the cell and then clear any
