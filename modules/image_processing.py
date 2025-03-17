@@ -82,6 +82,7 @@ def create_warped_image(file_path):
 
     # Read the uploaded image
     image = cv2.imread(file_path)
+    image = imutils.resize(image, width=600)
 
     # Call your find_puzzle function to get the warped image
     puzzle, warped = find_puzzle(image)
@@ -96,8 +97,10 @@ def extract_digit(cell, debug=False):
     # Apply automatic thresholding to the cell and then clear any
     # connected borders that touch the border of the cell
     thresh = cv2.threshold(cell, 0, 255,
-                           cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
-    thresh = clear_border(thresh)
+                           cv2.THRESH_BINARY_INV | # inverts the binary image (so the digit is white and the background is black)
+                           cv2.THRESH_OTSU)[1] # automatically calculates the optimal threshold for the image
+    thresh = clear_border(thresh) # it clears any connected borders that touch the image border
+                                    # (this is useful if there are unwanted edges or noise around the digit)
 
     # Check to see if we are visualizing the cell thresholding step
     if debug:
@@ -105,8 +108,8 @@ def extract_digit(cell, debug=False):
         cv2.waitKey(0)
 
     # Find contours in the thresholded cell
-    cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
-                            cv2.CHAIN_APPROX_SIMPLE)
+    cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, # ensures that only the outermost contours are considered (useful for identifying the digit)
+                            cv2.CHAIN_APPROX_SIMPLE) # simplifies the contours to reduce memory usage by approximating them
     cnts = imutils.grab_contours(cnts)
 
     # If no contours were found, then this is an empty cell
@@ -127,7 +130,8 @@ def extract_digit(cell, debug=False):
         return None
 
     # Apply the mask to the thresholded cell
-    digit = cv2.bitwise_and(thresh, thresh, mask=mask)
+    digit = cv2.bitwise_and(thresh, thresh, mask=mask) # The mask is applied to the thresholded image (thresh),
+    # keeping only the part of the image that corresponds to the digit, while the rest is discarded
 
     # Check to see if we should visualize the masking step
     if debug:
@@ -177,7 +181,7 @@ def show_cells(warped, grid_size=9, debug=True):
         # Append the row's digits to the main puzzle_cells list
         puzzle_cells.append(row_digits)
 
-    # Debugging visualization
+    # Debugging visualization (81 small boxes of empty or recognised digits)
     if debug:
         grid_image = None
         for row in range(grid_size):
@@ -186,11 +190,11 @@ def show_cells(warped, grid_size=9, debug=True):
                 cell = puzzle_cells[row][col]
                 if cell is not None:
                     # Resize each digit image to a fixed size
-                    resized_cell = cv2.resize(cell, (50, 50))
+                    resized_cell = cv2.resize(cell, (28, 28))
                     row_cells.append(resized_cell)
                 else:
                     # If the cell is empty, create a blank image
-                    blank_cell = np.zeros((50, 50), dtype="uint8")
+                    blank_cell = np.zeros((28, 28), dtype="uint8")
                     row_cells.append(blank_cell)
 
             # Horizontally concatenate the cells for each row

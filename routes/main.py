@@ -36,7 +36,7 @@ def upload_file():
         warped_image, warped_filename = create_warped_image(file_path)
 
         # Step 2: Extract Sudoku cells and recognize digits (as pixels)
-        puzzle_cells = show_cells(warped_image, debug=False)
+        puzzle_cells = show_cells(warped_image, debug=True)
 
         # Step 3: Convert extracted digits into a Sudoku board (pixels to numbers)
         board = cells_to_digits(puzzle_cells)
