@@ -3,7 +3,6 @@ from modules.image_processing import create_warped_image, show_cells
 from modules.digit_recognition import cells_to_digits
 from modules.board_display import draw_sudoku_board
 import os
-import cv2
 
 
 # Initialize Blueprint
@@ -29,32 +28,28 @@ def upload_file():
         return redirect(request.url)
 
     if file:
-        # Save the uploaded file to the 'uploads' folder
+        # Save the uploaded file
         file_path = os.path.join('uploads/', file.filename)
         file.save(file_path)
 
-        # Step 1: Warp the image to get a top-down view of the Sudoku grid
-        warped_image_path = create_warped_image(file_path)
+        # Step 1: Get the top-down view of the Sudoku grid
+        warped_image, warped_filename = create_warped_image(file_path)
 
-        # Step 2: Load the warped image
-        image = cv2.imread(warped_image_path, cv2.IMREAD_GRAYSCALE)
-        if image is None:
-            return "Error: Could not load the warped Sudoku image."
+        # Step 2: Extract Sudoku cells and recognize digits (as pixels)
+        puzzle_cells = show_cells(warped_image, debug=False)
 
-        # Step 3: Extract Sudoku cells and recognize digits
-        puzzle_cells = show_cells(image, debug=False)
-
-        # Step 4: Convert extracted digits into a Sudoku board
+        # Step 3: Convert extracted digits into a Sudoku board (pixels to numbers)
         board = cells_to_digits(puzzle_cells)
 
-        # Save a jpg of unsolved board
+        # Save a jpg of the unsolved board
         draw_sudoku_board(board, solved=False)
 
-        # Render solution.html with all required information
+        # Render solution.html with required information
         return render_template('solution.html',
                                filename=file.filename,
-                               warped_filename=warped_image_path.split('/')[-1],
+                               warped_filename=warped_filename,
                                board=board)
+
 
 
 # Serve uploaded files properly from the 'uploads' directory
