@@ -1,6 +1,6 @@
 # main.py
 from flask import Blueprint, render_template, request, redirect, url_for, send_from_directory
-from modules.image_processing import create_warped_image, show_cells
+from modules.image_processing import ImageProcessor
 from modules.digit_recognition import cells_to_digits
 from modules.board_display import draw_sudoku_board
 import os
@@ -33,24 +33,28 @@ def upload_file():
         file_path = os.path.join('uploads/', file.filename)
         file.save(file_path)
 
-        # Step 1: Get the top-down view of the Sudoku grid
-        warped_image, warped_filename = create_warped_image(file_path)
+        # Step 1: Process the image and extract the Sudoku board
+        processor = ImageProcessor(file_path)
 
-        # Step 2: Extract Sudoku cells and recognize digits (as pixels)
-        puzzle_cells = show_cells(warped_image, debug=True)
+        try:
+            processor.find_board(debug=True)  # Extract top-down view
+            processor.save_warped_board()  # Save the top-down view of the board
 
-        # Step 3: Convert extracted digits into a Sudoku board (pixels to numbers)
-        board = cells_to_digits(puzzle_cells)
+            # Step 2: Extract Sudoku cells
+            puzzle_cells = processor.extract_cells(debug=False)  # Extract cells with digits
 
-        # Save a jpg of the unsolved board
-        draw_sudoku_board(board, solved=False)
+            # Step 3: Convert extracted digits into a Sudoku board
+            board = cells_to_digits(puzzle_cells)
 
-        # Render solution.html with required information
-        return render_template('solution.html',
-                               filename=file.filename,
-                               warped_filename=warped_filename,
-                               board=board)
+            # Save a JPG of the unsolved board
+            draw_sudoku_board(board, solved=False)
 
+            # Render the solution page
+            return render_template('solution.html',
+                                   filename=file.filename)
+
+        except Exception as e:
+            return f"Error processing image: {str(e)}"
 
 
 # Serve uploaded files properly from the 'uploads' directory
