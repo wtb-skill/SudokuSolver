@@ -5,7 +5,6 @@ from Sudokunet import SudokuNet
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.datasets import mnist
 from tensorflow.keras.utils import to_categorical
-from sklearn.preprocessing import LabelBinarizer # older version
 from sklearn.metrics import classification_report
 import argparse
 import numpy as np

@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 import imutils
-import os
 from skimage.segmentation import clear_border
 from imutils.perspective import four_point_transform
 from typing import Tuple, Optional, List
