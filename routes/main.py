@@ -1,3 +1,4 @@
+# main.py
 from flask import Blueprint, render_template, request, redirect, url_for, send_from_directory
 from modules.image_processing import create_warped_image, show_cells
 from modules.digit_recognition import cells_to_digits

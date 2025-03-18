@@ -5,6 +5,11 @@ import numpy as np
 import cv2
 
 
+# Load the pre-trained model
+model_path = "models/sudoku_digit_recognizer.keras"
+model = load_model(model_path)
+
+
 def cells_to_digits(puzzle_cells: list) -> np.ndarray:
     """
     Converts the extracted Sudoku cells into a 9x9 Sudoku board with recognized digits using a pre-trained model.
@@ -17,10 +22,6 @@ def cells_to_digits(puzzle_cells: list) -> np.ndarray:
     """
     # Initialize an empty 9x9 Sudoku board with zeros (empty cells)
     board = np.zeros((9, 9), dtype="int")
-
-    # Load the pre-trained model (ensure the model path is correct)
-    model_path = "models/sudoku_digit_recognizer.keras"
-    model = load_model(model_path)
 
     # Loop through each row and column of the 9x9 grid
     for row in range(9):
