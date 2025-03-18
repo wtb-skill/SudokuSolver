@@ -2,6 +2,7 @@
 from flask import Flask
 from routes.main import main_bp  # Import routes from the main.py file
 
+
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads/'
 

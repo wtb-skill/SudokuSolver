@@ -1,37 +1,57 @@
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Activation, Flatten, Dense, Dropout
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Activation, Flatten, Dense, Dropout, Input
+from tensorflow.keras.models import Model
+
 
 class SudokuNet:
+    """
+    A convolutional neural network (CNN) architecture for recognizing handwritten digits
+    in Sudoku puzzles. The network consists of convolutional layers, activation functions,
+    pooling layers, fully connected (dense) layers, and dropout for regularization.
+    """
+
     @staticmethod
-    def build(width, height, depth, classes):
-        # Initialize the model
-        model = Sequential()
-        inputShape = (height, width, depth)
+    def build(width: int, height: int, depth: int, classes: int) -> Model:
+        """
+        Builds and returns the SudokuNet CNN model.
 
-        # First set of CONV => RELU => POOL layers
-        model.add(Conv2D(32, (5, 5), padding="same", input_shape=inputShape))
-        model.add(Activation("relu"))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
+        Parameters:
+        - width (int): The width of the input image.
+        - height (int): The height of the input image.
+        - depth (int): The number of channels in the input image (e.g., 1 for grayscale, 3 for RGB).
+        - classes (int): The number of output classes (digits 0-9, typically 10 classes).
 
-        # Second set of CONV => RELU => POOL layers
-        model.add(Conv2D(32, (3, 3), padding="same"))
-        model.add(Activation("relu"))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
+        Returns:
+        - Model: A compiled Keras Sequential model.
+        """
+        # Initialize the model with an explicit Input layer
+        model = Sequential([
+            Input(shape=(height, width, depth)),
 
-        # First set of FC => RELU layers
-        model.add(Flatten())
-        model.add(Dense(64))
-        model.add(Activation("relu"))
-        model.add(Dropout(0.5))
+            # First set of CONV => RELU => POOL layers
+            Conv2D(32, (5, 5), padding="same"),
+            Activation("relu"),
+            MaxPooling2D(pool_size=(2, 2)),
 
-        # Second set of FC => RELU layers
-        model.add(Dense(64))
-        model.add(Activation("relu"))
-        model.add(Dropout(0.5))
+            # Second set of CONV => RELU => POOL layers
+            Conv2D(32, (3, 3), padding="same"),
+            Activation("relu"),
+            MaxPooling2D(pool_size=(2, 2)),
 
-        # Softmax classifier
-        model.add(Dense(classes))
-        model.add(Activation("softmax"))
+            # First set of FC => RELU layers
+            Flatten(),
+            Dense(64),
+            Activation("relu"),
+            Dropout(0.5),
 
-        # Return the constructed network architecture
+            # Second set of FC => RELU layers
+            Dense(64),
+            Activation("relu"),
+            Dropout(0.5),
+
+            # Softmax classifier
+            Dense(classes),
+            Activation("softmax")
+        ])
+
         return model

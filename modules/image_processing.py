@@ -5,18 +5,19 @@ import numpy as np
 import imutils
 import cv2
 import os
+from typing import Tuple, Optional, List
 
 
-def find_puzzle(image, debug=False):
+def find_puzzle(image: np.ndarray, debug: bool = False) -> Tuple[np.ndarray, np.ndarray]:
     """
     Detects and extracts the Sudoku puzzle from an image.
 
     Parameters:
-        image: Input image containing a Sudoku puzzle.
-        debug: If True, displays debugging images for each step.
+        image (np.ndarray): Input image containing a Sudoku puzzle.
+        debug (bool): If True, displays debugging images for each step.
 
     Returns:
-        A tuple containing:
+        Tuple[np.ndarray, np.ndarray]:
         - The color (RGB) version of the extracted puzzle.
         - The grayscale version of the extracted puzzle.
     """
@@ -74,15 +75,17 @@ def find_puzzle(image, debug=False):
     return puzzle, warped  # Return both color and grayscale versions
 
 
-def create_warped_image(file_path):
+def create_warped_image(file_path: str) -> Tuple[np.ndarray, str]:
     """
     Reads an image, finds the Sudoku puzzle, and saves the warped version.
 
     Parameters:
-        file_path: Path to the input Sudoku image.
+        file_path (str): Path to the input Sudoku image.
 
     Returns:
-        The warped (grayscale) puzzle image and its filename.
+        Tuple[np.ndarray, str]:
+        - The warped (grayscale) puzzle image.
+        - The filename of the saved warped image.
     """
     warped_filename = 'warped_sudoku_board.jpg'
     warped_image_path = os.path.join('uploads', warped_filename)
@@ -97,16 +100,16 @@ def create_warped_image(file_path):
     return warped, warped_filename
 
 
-def extract_digit(cell, debug=False):
+def extract_digit(cell: np.ndarray, debug: bool = False) -> Optional[np.ndarray]:
     """
     Extracts the digit from a Sudoku cell (if present).
 
     Parameters:
-        cell: An individual Sudoku cell (grayscale).
-        debug: If True, shows intermediate processing steps.
+        cell (np.ndarray): An individual Sudoku cell (grayscale).
+        debug (bool): If True, shows intermediate processing steps.
 
     Returns:
-        The processed digit as an image or None if no digit is detected.
+        Optional[np.ndarray]: The processed digit as an image or None if no digit is detected.
     """
     # Apply automatic thresholding
     thresh = cv2.threshold(cell, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
@@ -148,17 +151,17 @@ def extract_digit(cell, debug=False):
     return digit
 
 
-def show_cells(warped, grid_size=9, debug=True):
+def show_cells(warped: np.ndarray, grid_size: int = 9, debug: bool = True) -> List[List[Optional[np.ndarray]]]:
     """
     Divides the Sudoku puzzle into 81 cells and displays them.
 
     Parameters:
-        warped: The top-down grayscale Sudoku puzzle image.
-        grid_size: The number of rows/columns (default: 9x9).
-        debug: If True, visualizes the extracted cells.
+        warped (np.ndarray): The top-down grayscale Sudoku puzzle image.
+        grid_size (int): The number of rows/columns (default: 9x9).
+        debug (bool): If True, visualizes the extracted cells.
 
     Returns:
-        A 2D list containing extracted digits or None for empty cells.
+        List[List[Optional[np.ndarray]]]: A 2D list containing extracted digits or None for empty cells.
     """
     h, w = warped.shape  # Get puzzle dimensions
     cell_height = h // grid_size  # Height of each cell

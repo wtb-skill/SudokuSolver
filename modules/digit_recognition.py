@@ -19,7 +19,7 @@ def cells_to_digits(puzzle_cells: list) -> np.ndarray:
     board = np.zeros((9, 9), dtype="int")
 
     # Load the pre-trained model (ensure the model path is correct)
-    model_path = "models/output_model.h5"
+    model_path = "models/sudoku_digit_recognizer.keras"
     model = load_model(model_path)
 
     # Loop through each row and column of the 9x9 grid

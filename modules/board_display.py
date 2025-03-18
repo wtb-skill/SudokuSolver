@@ -2,7 +2,22 @@ import numpy as np
 import cv2
 import os
 
-def draw_sudoku_board(board, cell_size=50, font_scale=1, thickness=2, solved=False):
+
+def draw_sudoku_board(board: np.ndarray, cell_size: int = 50, font_scale: float = 1, thickness: int = 2,
+                      solved: bool = False) -> None:
+    """
+    Draws a Sudoku board and saves it as an image.
+
+    Parameters:
+        board (np.ndarray): A 9x9 NumPy array representing the Sudoku grid.
+        cell_size (int): The size of each cell in pixels. Default is 50.
+        font_scale (float): The scale factor for the text size. Default is 1.
+        thickness (int): The thickness of grid lines and text. Default is 2.
+        solved (bool): If True, saves the image as 'sudoku_board_solved.jpg'; otherwise, 'sudoku_board_unsolved.jpg'.
+
+    Returns:
+        None
+    """
     grid_size = board.shape[0]  # 9x9
     image_size = grid_size * cell_size  # Total image size
 
@@ -24,7 +39,8 @@ def draw_sudoku_board(board, cell_size=50, font_scale=1, thickness=2, solved=Fal
                 text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)[0]
                 text_x = col * cell_size + (cell_size - text_size[0]) // 2
                 text_y = row * cell_size + (cell_size + text_size[1]) // 2
-                cv2.putText(board_img, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), thickness)
+                cv2.putText(board_img, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0),
+                            thickness)
 
     # Ensure the uploads directory exists
     os.makedirs("uploads", exist_ok=True)
