@@ -39,29 +39,48 @@ class ImageProcessor:
 
     def find_board(self, debug: bool = False) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Detect and extract the Sudoku puzzle from the image.
+        Detect and extract the Sudoku puzzle from the image by selecting the smallest contour
+        among the largest contours, with a dynamic threshold based on image size.
         """
         thresh = self.preprocess_image()
 
         # Find contours of the largest objects in the thresholded image
-        contours = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours = cv2.findContours(thresh.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         contours = imutils.grab_contours(contours)
+
+        # Sort contours by area (descending)
         contours = sorted(contours, key=cv2.contourArea, reverse=True)
 
-        puzzle_contour = None
+        # Get the image dimensions
+        height, width = self.image.shape[:2]
 
-        # Loop through contours to find the puzzle outline (a large quadrilateral)
+        # Define a dynamic threshold based on image size
+        # Use a percentage of the image area, e.g., 70% of the total image area
+        min_area = 0.3 * height * width  # 20% of the image's area
+
+        # Find the largest contours that exceed the dynamic threshold
+        largest_contours = []
         for contour in contours:
-            peri = cv2.arcLength(contour, True)
-            approx = cv2.approxPolyDP(contour, 0.02 * peri, True)
+            area = cv2.contourArea(contour)
+            if area > min_area:  # Only consider contours larger than the dynamic threshold
+                largest_contours.append(contour)
 
-            if len(approx) == 4:
-                puzzle_contour = approx
-                break
+        # If no large contours are found, raise an exception
+        if len(largest_contours) == 0:
+            raise Exception("Could not find a large enough Sudoku grid. Check thresholding and contours.")
 
-        # If no Sudoku grid is found, raise an error
-        if puzzle_contour is None:
-            raise Exception("Could not find Sudoku puzzle outline. Check thresholding and contours.")
+        # Now we find the smallest contour among the largest ones
+        smallest_contour = min(largest_contours, key=cv2.contourArea)
+
+        # Approximate the polygon (quadrilateral) from the smallest large contour
+        peri = cv2.arcLength(smallest_contour, True)
+        approx = cv2.approxPolyDP(smallest_contour, 0.02 * peri, True)
+
+        # If the approximated contour is not a quadrilateral, skip it
+        if len(approx) != 4:
+            raise Exception("Could not find Sudoku puzzle outline. The contour is not quadrilateral.")
+
+        puzzle_contour = approx
 
         # Optionally visualize the detected puzzle outline
         if debug:
@@ -71,67 +90,10 @@ class ImageProcessor:
             cv2.waitKey(0)
 
         # Apply a perspective transform to get a top-down view of the board
-        self.warped_board = four_point_transform(cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY), puzzle_contour.reshape(4, 2))
+        self.warped_board = four_point_transform(cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY),
+                                                 puzzle_contour.reshape(4, 2))
 
         return self.warped_board
-
-    # def find_board_new(self, debug: bool = False) -> Tuple[np.ndarray, np.ndarray]:
-    #     """
-    #     Detect and extract the Sudoku puzzle from the image by selecting the smallest contour
-    #     among the largest contours, with a dynamic threshold based on image size.
-    #     """
-    #     thresh = self.preprocess_image()
-    #
-    #     # Find contours of the largest objects in the thresholded image
-    #     contours = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    #     contours = imutils.grab_contours(contours)
-    #
-    #     # Sort contours by area (descending)
-    #     contours = sorted(contours, key=cv2.contourArea, reverse=True)
-    #
-    #     # Get the image dimensions
-    #     height, width = self.image.shape[:2]
-    #
-    #     # Define a dynamic threshold based on image size
-    #     # Use a percentage of the image area, e.g., 70% of the total image area
-    #     min_area = 0.5 * height * width  # 70% of the image's area
-    #
-    #     # Find the largest contours that exceed the dynamic threshold
-    #     largest_contours = []
-    #     for contour in contours:
-    #         area = cv2.contourArea(contour)
-    #         if area > min_area:  # Only consider contours larger than the dynamic threshold
-    #             largest_contours.append(contour)
-    #
-    #     # If no large contours are found, raise an exception
-    #     if len(largest_contours) == 0:
-    #         raise Exception("Could not find a large enough Sudoku grid. Check thresholding and contours.")
-    #
-    #     # Now we find the smallest contour among the largest ones
-    #     smallest_contour = min(largest_contours, key=cv2.contourArea)
-    #
-    #     # Approximate the polygon (quadrilateral) from the smallest large contour
-    #     peri = cv2.arcLength(smallest_contour, True)
-    #     approx = cv2.approxPolyDP(smallest_contour, 0.02 * peri, True)
-    #
-    #     # If the approximated contour is not a quadrilateral, skip it
-    #     # if len(approx) != 4:
-    #     #     raise Exception("Could not find Sudoku puzzle outline. The contour is not quadrilateral.")
-    #
-    #     puzzle_contour = approx
-    #
-    #     # Optionally visualize the detected puzzle outline
-    #     if debug:
-    #         output = self.image.copy()
-    #         cv2.drawContours(output, [puzzle_contour], -1, (0, 255, 0), 2)
-    #         cv2.imshow("Puzzle Outline", output)
-    #         cv2.waitKey(0)
-    #
-    #     # Apply a perspective transform to get a top-down view of the board
-    #     self.warped_board = four_point_transform(cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY),
-    #                                              puzzle_contour.reshape(4, 2))
-    #
-    #     return self.warped_board
 
     def save_warped_board(self, save_path: str = 'uploads/warped_sudoku_board.jpg') -> str:
         """

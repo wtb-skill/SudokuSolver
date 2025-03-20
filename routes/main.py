@@ -37,11 +37,11 @@ def upload_file():
         processor = ImageProcessor(file_path)
 
         try:
-            processor.find_board(debug=False)  # Extract top-down view
+            processor.find_board(debug=True)  # Extract top-down view
             processor.save_warped_board()  # Save the top-down view of the board
 
             # Step 2: Extract Sudoku cells
-            puzzle_cells = processor.extract_digits_from_cells(debug=True)  # Extract cells with digits
+            puzzle_cells = processor.extract_digits_from_cells(debug=False)  # Extract cells with digits
 
             # Step 3: Convert extracted digits into a Sudoku board
             recognizer = DigitRecognizer(model_path="models/sudoku_digit_recognizer.keras")
