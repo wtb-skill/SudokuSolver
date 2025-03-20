@@ -26,12 +26,15 @@ class ImageProcessor:
         """
         # Convert the image to grayscale (simplifies processing)
         gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
+
         # Apply Gaussian blur to reduce noise and smooth the image
         blurred = cv2.GaussianBlur(gray, (7, 7), 3)
+
         # Apply adaptive thresholding to emphasize edges and contrast
         thresh = cv2.adaptiveThreshold(
             blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
         )
+
         return cv2.bitwise_not(thresh)
 
     def find_board(self, debug: bool = False) -> Tuple[np.ndarray, np.ndarray]:
@@ -72,63 +75,63 @@ class ImageProcessor:
 
         return self.warped_board
 
-    def find_board_new(self, debug: bool = False) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Detect and extract the Sudoku puzzle from the image by selecting the smallest contour
-        among the largest contours, with a dynamic threshold based on image size.
-        """
-        thresh = self.preprocess_image()
-
-        # Find contours of the largest objects in the thresholded image
-        contours = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        contours = imutils.grab_contours(contours)
-
-        # Sort contours by area (descending)
-        contours = sorted(contours, key=cv2.contourArea, reverse=True)
-
-        # Get the image dimensions
-        height, width = self.image.shape[:2]
-
-        # Define a dynamic threshold based on image size
-        # Use a percentage of the image area, e.g., 70% of the total image area
-        min_area = 0.5 * height * width  # 70% of the image's area
-
-        # Find the largest contours that exceed the dynamic threshold
-        largest_contours = []
-        for contour in contours:
-            area = cv2.contourArea(contour)
-            if area > min_area:  # Only consider contours larger than the dynamic threshold
-                largest_contours.append(contour)
-
-        # If no large contours are found, raise an exception
-        if len(largest_contours) == 0:
-            raise Exception("Could not find a large enough Sudoku grid. Check thresholding and contours.")
-
-        # Now we find the smallest contour among the largest ones
-        smallest_contour = min(largest_contours, key=cv2.contourArea)
-
-        # Approximate the polygon (quadrilateral) from the smallest large contour
-        peri = cv2.arcLength(smallest_contour, True)
-        approx = cv2.approxPolyDP(smallest_contour, 0.02 * peri, True)
-
-        # If the approximated contour is not a quadrilateral, skip it
-        # if len(approx) != 4:
-        #     raise Exception("Could not find Sudoku puzzle outline. The contour is not quadrilateral.")
-
-        puzzle_contour = approx
-
-        # Optionally visualize the detected puzzle outline
-        if debug:
-            output = self.image.copy()
-            cv2.drawContours(output, [puzzle_contour], -1, (0, 255, 0), 2)
-            cv2.imshow("Puzzle Outline", output)
-            cv2.waitKey(0)
-
-        # Apply a perspective transform to get a top-down view of the board
-        self.warped_board = four_point_transform(cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY),
-                                                 puzzle_contour.reshape(4, 2))
-
-        return self.warped_board
+    # def find_board_new(self, debug: bool = False) -> Tuple[np.ndarray, np.ndarray]:
+    #     """
+    #     Detect and extract the Sudoku puzzle from the image by selecting the smallest contour
+    #     among the largest contours, with a dynamic threshold based on image size.
+    #     """
+    #     thresh = self.preprocess_image()
+    #
+    #     # Find contours of the largest objects in the thresholded image
+    #     contours = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    #     contours = imutils.grab_contours(contours)
+    #
+    #     # Sort contours by area (descending)
+    #     contours = sorted(contours, key=cv2.contourArea, reverse=True)
+    #
+    #     # Get the image dimensions
+    #     height, width = self.image.shape[:2]
+    #
+    #     # Define a dynamic threshold based on image size
+    #     # Use a percentage of the image area, e.g., 70% of the total image area
+    #     min_area = 0.5 * height * width  # 70% of the image's area
+    #
+    #     # Find the largest contours that exceed the dynamic threshold
+    #     largest_contours = []
+    #     for contour in contours:
+    #         area = cv2.contourArea(contour)
+    #         if area > min_area:  # Only consider contours larger than the dynamic threshold
+    #             largest_contours.append(contour)
+    #
+    #     # If no large contours are found, raise an exception
+    #     if len(largest_contours) == 0:
+    #         raise Exception("Could not find a large enough Sudoku grid. Check thresholding and contours.")
+    #
+    #     # Now we find the smallest contour among the largest ones
+    #     smallest_contour = min(largest_contours, key=cv2.contourArea)
+    #
+    #     # Approximate the polygon (quadrilateral) from the smallest large contour
+    #     peri = cv2.arcLength(smallest_contour, True)
+    #     approx = cv2.approxPolyDP(smallest_contour, 0.02 * peri, True)
+    #
+    #     # If the approximated contour is not a quadrilateral, skip it
+    #     # if len(approx) != 4:
+    #     #     raise Exception("Could not find Sudoku puzzle outline. The contour is not quadrilateral.")
+    #
+    #     puzzle_contour = approx
+    #
+    #     # Optionally visualize the detected puzzle outline
+    #     if debug:
+    #         output = self.image.copy()
+    #         cv2.drawContours(output, [puzzle_contour], -1, (0, 255, 0), 2)
+    #         cv2.imshow("Puzzle Outline", output)
+    #         cv2.waitKey(0)
+    #
+    #     # Apply a perspective transform to get a top-down view of the board
+    #     self.warped_board = four_point_transform(cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY),
+    #                                              puzzle_contour.reshape(4, 2))
+    #
+    #     return self.warped_board
 
     def save_warped_board(self, save_path: str = 'uploads/warped_sudoku_board.jpg') -> str:
         """
@@ -181,34 +184,33 @@ class ImageProcessor:
 
         return digit
 
-    def extract_cells(self, grid_size: int = 9, debug: bool = False) -> List[List[Optional[np.ndarray]]]:
+    def split_into_cells(self, grid_size=9):
         """
-        Divides the Sudoku puzzle into (81) cells and extracts digits.
+        Divides the Sudoku puzzle into (81) cells.
         """
         if self.warped_board is None:
             raise ValueError("Warped image not available. Run find_puzzle() first.")
 
-        h, w = self.warped_board.shape
-        cell_height = h // grid_size
-        cell_width = w // grid_size
-        puzzle_cells = []
+        self.warped_board = cv2.resize(self.warped_board, (450, 450))
 
-        for row in range(grid_size):
-            row_digits = []
-            for col in range(grid_size):
-                x_start, y_start = col * cell_width, row * cell_height
-                x_end, y_end = (col + 1) * cell_width, (row + 1) * cell_height
+        rows = np.vsplit(self.warped_board, grid_size)
 
-                cell = self.warped_board[y_start:y_end, x_start:x_end]
-                digit = self._extract_digit(cell)
-                row_digits.append(digit)
-
-            puzzle_cells.append(row_digits)
-
-        if debug:
-            self._show_extracted_cells(puzzle_cells)
+        puzzle_cells = [np.hsplit(r, grid_size) for r in rows]
 
         return puzzle_cells
+
+    def extract_digits_from_cells(self, debug=False):
+        """
+        Extracts digits from each cell in the provided 9x9 grid.
+        Returns a 9x9 list with extracted digits or None for empty cells.
+        """
+        puzzle_cells = self.split_into_cells()
+        digits = [[self._extract_digit(cell) for cell in row] for row in puzzle_cells]
+
+        if debug:
+            self._show_extracted_cells(digits)
+
+        return digits
 
     def _show_extracted_cells(self, puzzle_cells: List[List[Optional[np.ndarray]]]):
         """
