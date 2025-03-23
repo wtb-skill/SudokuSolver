@@ -1,4 +1,3 @@
-# modules/image_processing.py
 import cv2
 import numpy as np
 import imutils
@@ -9,242 +8,190 @@ from tensorflow.keras.preprocessing.image import img_to_array
 from typing import Tuple, Optional, List
 
 
-class ImageProcessor:
+class SudokuImageProcessor:
     def __init__(self, image_path: str, debug: DebugVisualizer):
         """
-        Initialize with an image path and preprocess it.
+        Initialize the image processor with an image path and preprocess the image.
         """
         self.image_path = image_path
-        self.image = cv2.imread(image_path)
-        self.warped_board = None
+        self.original_image = cv2.imread(image_path)
         self.debug = debug
+        self.sudoku_board = None
 
-        if self.image is None:
+        if self.original_image is None:
             raise ValueError("Image could not be loaded. Check the file path.")
 
-        self.image = imutils.resize(self.image, width=600)  # Resize for easier processing
+        self.original_image = imutils.resize(self.original_image, width=600)  # Resize for easier processing
 
-    def preprocess_image(self) -> None:
+    def preprocess_image_for_edge_detection(self) -> None:
         """
-        Convert the image to grayscale, apply Gaussian blur, and thresholding.
+        Convert the image to grayscale, apply Gaussian blur, and perform edge detection.
         """
-        # Convert the image to grayscale (simplifies processing)
-        gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
-
-        # Apply Gaussian blur to reduce noise and smooth the image
-        blurred = cv2.GaussianBlur(gray, (7, 7), 3)
-
-        # Apply adaptive thresholding to emphasize edges and contrast
-        thresh = cv2.adaptiveThreshold(
-            blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
+        gray_image = cv2.cvtColor(self.original_image, cv2.COLOR_BGR2GRAY)
+        blurred_image = cv2.GaussianBlur(gray_image, (7, 7), 3)
+        thresholded_image = cv2.adaptiveThreshold(
+            blurred_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
         )
 
-        self.debug.add_image("1_Thresholded", thresh)  # Store debug image
+        self.debug.add_image("Thresholded_Edges", thresholded_image)
 
         return None
 
-    def find_board(self) -> None:
+    def detect_sudoku_board_contour(self) -> None:
         """
-        Detect and extract the Sudoku puzzle from the image by selecting the smallest contour
-        among the largest contours, with a dynamic threshold based on image size.
+        Detect the Sudoku puzzle's outline from the image using contours.
         """
-        # Retrieve the preprocessed threshold image from DebugVisualizer
-        thresh = self.debug.images.get("1_Thresholded")
+        thresholded_image = self.debug.images.get("Thresholded_Edges")
 
-        # Find contours of the largest objects in the thresholded image
-        contours = cv2.findContours(thresh.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        contours = cv2.findContours(thresholded_image.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         contours = imutils.grab_contours(contours)
 
-        # Sort contours by area (descending)
         contours = sorted(contours, key=cv2.contourArea, reverse=True)
 
-        # Get the image dimensions
-        height, width = self.image.shape[:2]
+        height, width = self.original_image.shape[:2]
+        min_contour_area = 0.3 * height * width  # 30% of the image's area
 
-        # Define a dynamic threshold based on image size
-        # Use a percentage of the image area, e.g., 30% of the total image area
-        min_area = 0.3 * height * width  # 30% of the image's area
+        largest_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > min_contour_area]
 
-        # Find the largest contours that exceed the dynamic threshold
-        largest_contours = []
-        for contour in contours:
-            area = cv2.contourArea(contour)
-            if area > min_area:  # Only consider contours larger than the dynamic threshold
-                largest_contours.append(contour)
-
-        # If no large contours are found, raise an exception
         if len(largest_contours) == 0:
-            raise Exception("Could not find a large enough Sudoku grid. Check thresholding and contours.")
+            raise Exception("No large enough Sudoku grid found.")
 
-        # Now we find the smallest contour among the largest ones
         smallest_contour = min(largest_contours, key=cv2.contourArea)
+        perimeter = cv2.arcLength(smallest_contour, True)
+        approx_polygon = cv2.approxPolyDP(smallest_contour, 0.02 * perimeter, True)
 
-        # Approximate the polygon (quadrilateral) from the smallest large contour
-        peri = cv2.arcLength(smallest_contour, True)
-        approx = cv2.approxPolyDP(smallest_contour, 0.02 * peri, True)
+        if len(approx_polygon) != 4:
+            raise Exception("The detected contour is not quadrilateral.")
 
-        # If the approximated contour is not a quadrilateral, skip it
-        if len(approx) != 4:
-            raise Exception("Could not find Sudoku puzzle outline. The contour is not quadrilateral.")
+        sudoku_contour = approx_polygon
 
-        puzzle_contour = approx
+        detected_board_image = self.original_image.copy()
+        cv2.drawContours(detected_board_image, [sudoku_contour], -1, (0, 255, 0), 2)
+        self.debug.add_image("Detected_Sudoku_Outline", detected_board_image)
 
-        # Create an image with detected contours drawn
-        detected_board = self.image.copy()
-        cv2.drawContours(detected_board, [puzzle_contour], -1, (0, 255, 0), 2)
-        self.debug.add_image("2_Detected_Outline", detected_board)  # Store detected outline
+        self.sudoku_board = four_point_transform(
+            cv2.cvtColor(self.original_image, cv2.COLOR_BGR2GRAY), sudoku_contour.reshape(4, 2)
+        )
 
-        # Apply perspective transform to get a top-down view of the board
-        self.warped_board = four_point_transform(cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY),
-                                                 puzzle_contour.reshape(4, 2))
-
-        # Store the warped board image in DebugVisualizer
-        self.debug.add_image("3_Warped_Board", self.warped_board)
+        self.debug.add_image("Warped_Sudoku_Board", self.sudoku_board)
 
         return None
 
     @staticmethod
-    def _extract_digit(cell: np.ndarray) -> Optional[np.ndarray]:
+    def extract_digit_from_cell(cell_image: np.ndarray) -> Optional[np.ndarray]:
         """
-        Extracts the digit from a Sudoku cell.
+        Extracts the digit from a single Sudoku cell, if present.
         """
-        # Apply automatic thresholding
-        thresh = cv2.threshold(cell, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
-        thresh = clear_border(thresh)
+        binary_image = cv2.threshold(cell_image, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
+        cleared_image = clear_border(binary_image)
 
-        # Find external contours
-        contours = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours = cv2.findContours(cleared_image.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         contours = imutils.grab_contours(contours)
 
-        # Return None if no contours (empty cell)
         if len(contours) == 0:
             return None
 
-        # Find the largest contour (likely the digit)
         largest_contour = max(contours, key=cv2.contourArea)
 
-        # Create a mask to extract the digit
-        mask = np.zeros(thresh.shape, dtype="uint8")
+        mask = np.zeros(cleared_image.shape, dtype="uint8")
         cv2.drawContours(mask, [largest_contour], -1, 255, -1)
 
-        # Compute the percentage of masked pixels
-        (h, w) = thresh.shape
-        percent_filled = cv2.countNonZero(mask) / float(w * h)
+        (height, width) = cleared_image.shape
+        occupied_percentage = cv2.countNonZero(mask) / float(width * height)
 
-        # If less than 1% of the cell is filled, ignore it (likely noise)
-        if percent_filled < 0.01:
+        if occupied_percentage < 0.01:
             return None
 
-        # Apply the mask to extract the digit
-        digit = cv2.bitwise_and(thresh, thresh, mask=mask)
+        digit_image = cv2.bitwise_and(cleared_image, cleared_image, mask=mask)
 
-        return digit
+        return digit_image
 
-    def _split_into_cells(self, grid_size=9):
+    def split_sudoku_board_into_cells(self, grid_size=9) -> List[List[np.ndarray]]:
         """
-        Divides the Sudoku puzzle into (81) cells.
+        Split the warped Sudoku board image into individual cells.
         """
-        # Retrieve the warped board from DebugVisualizer
-        warped_board = self.debug.images.get("3_Warped_Board")
+        if self.sudoku_board is None:
+            raise ValueError("Warped Sudoku board not found. Run detect_sudoku_board_contour() first.")
 
-        if warped_board is None:
-            raise ValueError("Warped image not available. Run find_puzzle() first.")
+        resized_board = cv2.resize(self.sudoku_board, (450, 450))
+        rows = np.vsplit(resized_board, grid_size)
+        cells = [np.hsplit(row, grid_size) for row in rows]
 
-        warped_board = cv2.resize(self.warped_board, (450, 450))
+        return cells
 
-        rows = np.vsplit(warped_board, grid_size)
-
-        puzzle_cells = [np.hsplit(r, grid_size) for r in rows]
-
-        return puzzle_cells
-
-    def extract_digits_from_cells(self):
+    def extract_digits_from_cells(self) -> List[List[Optional[np.ndarray]]]:
         """
-        Extracts digits from each cell in the provided 9x9 grid.
-        Returns a 9x9 list with extracted digits or None for empty cells.
+        Extracts digits from each cell of the 9x9 Sudoku grid.
         """
-        puzzle_cells = self._split_into_cells()
-        digits = [[self._extract_digit(cell) for cell in row] for row in puzzle_cells]
+        puzzle_cells = self.split_sudoku_board_into_cells()
+        extracted_digits = [
+            [self.extract_digit_from_cell(cell) for cell in row] for row in puzzle_cells
+        ]
 
-        self._show_extracted_cells(digits)
+        self.display_extracted_digits(extracted_digits)
 
-        return digits
+        return extracted_digits
 
-    def _show_extracted_cells(self, puzzle_cells: List[List[Optional[np.ndarray]]]):
+    def display_extracted_digits(self, extracted_cells: List[List[Optional[np.ndarray]]]) -> None:
         """
-        Helper function to visualize extracted Sudoku cells.
+        Visualizes the extracted digits from each cell.
         """
         grid_image = None
 
-        for row in puzzle_cells:
-            row_cells = [cv2.resize(cell, (28, 28)) if cell is not None else np.zeros((28, 28), dtype="uint8") for cell in row]
-            row_image = np.concatenate(row_cells, axis=1)
-
+        for row in extracted_cells:
+            resized_cells = [
+                cv2.resize(cell, (28, 28)) if cell is not None else np.zeros((28, 28), dtype="uint8") for cell in row
+            ]
+            row_image = np.concatenate(resized_cells, axis=1)
             grid_image = row_image if grid_image is None else np.concatenate([grid_image, row_image], axis=0)
 
-        # Store the extracted digits grid in DebugVisualizer
-        self.debug.add_image("4_Extracted_Digits", grid_image)
+        self.debug.add_image("Extracted_Digits_Grid", grid_image)
 
-    def _preprocess_cell(self, cell: np.ndarray) -> np.ndarray:
+    @staticmethod
+    def preprocess_cell_image(cell_image: np.ndarray) -> np.ndarray:
         """
-        Preprocesses a Sudoku cell image for digit recognition.
-
-        Parameters:
-            cell (np.ndarray): The image of a digit.
-
-        Returns:
-            np.ndarray: Preprocessed image ready for model prediction.
+        Preprocess a Sudoku cell image for recognition.
         """
-        roi = cv2.resize(cell, (28, 28))  # Resize to 28x28 pixels
-        roi = roi.astype("float") / 255.0  # Normalize pixel values to [0,1]
-        roi = img_to_array(roi)  # Convert image to array
-        roi = np.expand_dims(roi, axis=0)  # Add batch dimension
-        return roi
+        resized_cell = cv2.resize(cell_image, (28, 28))  # Resize to 28x28 pixels
+        normalized_cell = resized_cell.astype("float") / 255.0  # Normalize pixel values to [0,1]
+        cell_array = img_to_array(normalized_cell)  # Convert to array
+        cell_array = np.expand_dims(cell_array, axis=0)  # Add batch dimension
+        return cell_array
 
-    def preprocess_cells(self, extracted_digits: List[List[Optional[np.ndarray]]]) -> List[List[Optional[np.ndarray]]]:
+    def preprocess_extracted_digits(self, extracted_digits: List[List[Optional[np.ndarray]]]) -> List[List[Optional[np.ndarray]]]:
         """
-        Preprocesses the extracted digits from each cell using _preprocess_cell.
-
-        Parameters:
-            extracted_digits (list): A 2D list of extracted Sudoku cells.
-
-        Returns:
-            list: A 2D list of preprocessed cells (ready for model prediction).
+        Preprocesses the extracted digits from the Sudoku cells for model prediction.
         """
-        preprocessed_digits = []
+        preprocessed_cells = []
 
         for row in extracted_digits:
-            preprocessed_row = []
-            for cell in row:
-                if cell is not None:
-                    preprocessed_row.append(self._preprocess_cell(cell))  # Preprocess non-empty cells
-                else:
-                    preprocessed_row.append(None)  # Keep empty cells as None
-            preprocessed_digits.append(preprocessed_row)
+            preprocessed_row = [
+                self.preprocess_cell_image(cell) if cell is not None else None for cell in row
+            ]
+            preprocessed_cells.append(preprocessed_row)
 
-        return preprocessed_digits
+        return preprocessed_cells
 
-    def run(self):
+    def process_sudoku_image(self) -> List[List[Optional[np.ndarray]]]:
         """
-        Executes the full pipeline to process the Sudoku image step by step.
+        Executes the entire image processing pipeline for Sudoku digit extraction.
         """
         try:
             print("[INFO] Preprocessing the image...")
-            self.preprocess_image()
+            self.preprocess_image_for_edge_detection()
 
-            print("[INFO] Finding the Sudoku board...")
-            self.find_board()
+            print("[INFO] Detecting Sudoku board...")
+            self.detect_sudoku_board_contour()
 
-            print("[INFO] Extracting digits from cells...")
+            print("[INFO] Extracting digits from Sudoku cells...")
             extracted_digits = self.extract_digits_from_cells()
 
-            print("[INFO] Preprocessing cells with digits...")
-            preprocessed_digits = self.preprocess_cells(extracted_digits)
+            print("[INFO] Preprocessing the extracted cells...")
+            preprocessed_digits = self.preprocess_extracted_digits(extracted_digits)
 
-            print("[SUCCESS] Image processing completed.")
-            return preprocessed_digits  # Return the extracted digit grid
+            print("[SUCCESS] Sudoku image processing completed.")
+            return preprocessed_digits
 
         except Exception as e:
             print(f"[ERROR] {e}")
             return None
-

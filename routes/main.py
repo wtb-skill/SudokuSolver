@@ -1,6 +1,6 @@
 # main.py
 from flask import Blueprint, render_template, request, redirect, send_from_directory
-from modules.image_processing import ImageProcessor
+from modules.image_processing import SudokuImageProcessor
 from modules.digit_recognition import DigitRecognizer
 from modules.debug import DebugVisualizer
 from modules.board_display import draw_sudoku_board
@@ -40,8 +40,8 @@ def upload_file():
 
         try:
             # Step 1: Process the image and extract the Sudoku board
-            processor = ImageProcessor(file_path, debug)
-            puzzle_cells = processor.run()
+            processor = SudokuImageProcessor(file_path, debug)
+            puzzle_cells = processor.process_sudoku_image()
 
             # Step 2: Convert extracted digits into a Sudoku board
             recognizer = DigitRecognizer(model_path="models/sudoku_digit_recognizer.keras")
