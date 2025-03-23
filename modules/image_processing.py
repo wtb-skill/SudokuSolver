@@ -22,6 +22,7 @@ class SudokuImageProcessor:
             raise ValueError("Image could not be loaded. Check the file path.")
 
         self.original_image = imutils.resize(self.original_image, width=600)  # Resize for easier processing
+        self.debug.add_image("Original_Image", self.original_image)
 
     def preprocess_image_for_edge_detection(self) -> None:
         """
