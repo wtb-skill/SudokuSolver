@@ -2,26 +2,28 @@
 import cv2
 import numpy as np
 import imutils
+from modules.debug import DebugVisualizer
 from skimage.segmentation import clear_border
 from imutils.perspective import four_point_transform
 from typing import Tuple, Optional, List
 
 
 class ImageProcessor:
-    def __init__(self, image_path: str):
+    def __init__(self, image_path: str, debug: DebugVisualizer):
         """
         Initialize with an image path and preprocess it.
         """
         self.image_path = image_path
         self.image = cv2.imread(image_path)
         self.warped_board = None
+        self.debug = debug
 
         if self.image is None:
             raise ValueError("Image could not be loaded. Check the file path.")
 
         self.image = imutils.resize(self.image, width=600)  # Resize for easier processing
 
-    def preprocess_image(self) -> np.ndarray:
+    def preprocess_image(self) -> None:
         """
         Convert the image to grayscale, apply Gaussian blur, and thresholding.
         """
@@ -36,14 +38,17 @@ class ImageProcessor:
             blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
         )
 
-        return cv2.bitwise_not(thresh)
+        self.debug.add_image("1_Thresholded", thresh)  # Store debug image
 
-    def find_board(self, debug: bool = False) -> Tuple[np.ndarray, np.ndarray]:
+        return None
+
+    def find_board(self) -> None:
         """
         Detect and extract the Sudoku puzzle from the image by selecting the smallest contour
         among the largest contours, with a dynamic threshold based on image size.
         """
-        thresh = self.preprocess_image()
+        # Retrieve the preprocessed threshold image from DebugVisualizer
+        thresh = self.debug.images.get("1_Thresholded")
 
         # Find contours of the largest objects in the thresholded image
         contours = cv2.findContours(thresh.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -56,8 +61,8 @@ class ImageProcessor:
         height, width = self.image.shape[:2]
 
         # Define a dynamic threshold based on image size
-        # Use a percentage of the image area, e.g., 70% of the total image area
-        min_area = 0.3 * height * width  # 20% of the image's area
+        # Use a percentage of the image area, e.g., 30% of the total image area
+        min_area = 0.3 * height * width  # 30% of the image's area
 
         # Find the largest contours that exceed the dynamic threshold
         largest_contours = []
@@ -83,33 +88,34 @@ class ImageProcessor:
 
         puzzle_contour = approx
 
-        # Optionally visualize the detected puzzle outline
-        if debug:
-            output = self.image.copy()
-            cv2.drawContours(output, [puzzle_contour], -1, (0, 255, 0), 2)
-            cv2.imshow("Puzzle Outline", output)
-            cv2.waitKey(0)
+        # Create an image with detected contours drawn
+        detected_board = self.image.copy()
+        cv2.drawContours(detected_board, [puzzle_contour], -1, (0, 255, 0), 2)
+        self.debug.add_image("2_Detected_Outline", detected_board)  # Store detected outline
 
-        # Apply a perspective transform to get a top-down view of the board
+        # Apply perspective transform to get a top-down view of the board
         self.warped_board = four_point_transform(cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY),
                                                  puzzle_contour.reshape(4, 2))
 
-        return self.warped_board
+        # Store the warped board image in DebugVisualizer
+        self.debug.add_image("3_Warped_Board", self.warped_board)
 
-    def save_warped_board(self, save_path: str = 'uploads/warped_sudoku_board.jpg') -> str:
-        """
-        Saves the warped Sudoku board.
-        Parameters:
-            save_path (str): Path to the input Sudoku image.
+        return None
 
-        Returns:
-            Tuple[np.ndarray, str]: The warped (grayscale) top-down view of board image.
-        """
-        if self.warped_board is None:
-            raise ValueError("Warped board is not generated yet. Run find_puzzle() first.")
-
-        cv2.imwrite(save_path, self.warped_board)
-        return save_path
+    # def save_warped_board(self, save_path: str = 'uploads/warped_sudoku_board.jpg') -> str:
+    #     """
+    #     Saves the warped Sudoku board.
+    #     Parameters:
+    #         save_path (str): Path to the input Sudoku image.
+    #
+    #     Returns:
+    #         Tuple[np.ndarray, str]: The warped (grayscale) top-down view of board image.
+    #     """
+    #     if self.warped_board is None:
+    #         raise ValueError("Warped board is not generated yet. Run find_puzzle() first.")
+    #
+    #     cv2.imwrite(save_path, self.warped_board)
+    #     return save_path
 
     def _extract_digit(self, cell: np.ndarray) -> Optional[np.ndarray]:
         """
@@ -151,18 +157,21 @@ class ImageProcessor:
         """
         Divides the Sudoku puzzle into (81) cells.
         """
-        if self.warped_board is None:
+        # Retrieve the warped board from DebugVisualizer
+        warped_board = self.debug.images.get("3_Warped_Board")
+
+        if warped_board is None:
             raise ValueError("Warped image not available. Run find_puzzle() first.")
 
-        self.warped_board = cv2.resize(self.warped_board, (450, 450))
+        warped_board = cv2.resize(self.warped_board, (450, 450))
 
-        rows = np.vsplit(self.warped_board, grid_size)
+        rows = np.vsplit(warped_board, grid_size)
 
         puzzle_cells = [np.hsplit(r, grid_size) for r in rows]
 
         return puzzle_cells
 
-    def extract_digits_from_cells(self, debug=False):
+    def extract_digits_from_cells(self):
         """
         Extracts digits from each cell in the provided 9x9 grid.
         Returns a 9x9 list with extracted digits or None for empty cells.
@@ -170,8 +179,7 @@ class ImageProcessor:
         puzzle_cells = self.split_into_cells()
         digits = [[self._extract_digit(cell) for cell in row] for row in puzzle_cells]
 
-        if debug:
-            self._show_extracted_cells(digits)
+        self._show_extracted_cells(digits)
 
         return digits
 
@@ -187,6 +195,30 @@ class ImageProcessor:
 
             grid_image = row_image if grid_image is None else np.concatenate([grid_image, row_image], axis=0)
 
-        cv2.imshow("Sudoku Puzzle Cells", grid_image)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        # Store the extracted digits grid in DebugVisualizer
+        self.debug.add_image("4_Extracted_Digits", grid_image)
+
+    def run(self):
+        """
+        Executes the full pipeline to process the Sudoku image step by step.
+        Parameters:
+            save_warped (bool): Whether to save the warped board image.
+            debug (bool): Whether to enable debug visualizations.
+        """
+        try:
+            print("[INFO] Preprocessing the image...")
+            self.preprocess_image()
+
+            print("[INFO] Finding the Sudoku board...")
+            self.find_board()
+
+            print("[INFO] Extracting digits from cells...")
+            extracted_digits = self.extract_digits_from_cells()
+
+            print("[SUCCESS] Image processing completed.")
+            return extracted_digits  # Return the extracted digit grid
+
+        except Exception as e:
+            print(f"[ERROR] {e}")
+            return None
+

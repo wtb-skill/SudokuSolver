@@ -4,11 +4,10 @@ import os
 import numpy as np
 
 class DebugVisualizer:
-    def __init__(self, debug: bool = False, output_dir: str = "debug_images"):
+    def __init__(self, output_dir: str = "debug_images"):
         """
         Handles saving and displaying debug images at different stages.
         """
-        self.debug = debug
         self.output_dir = output_dir
         self.images = {}  # Dictionary to store step-name -> image
 
@@ -20,8 +19,6 @@ class DebugVisualizer:
         Store an image under a specific step name.
         """
         self.images[step_name] = image
-        if self.debug:
-            cv2.imshow(step_name, image)  # Show image if debugging is enabled
 
     def save_images(self):
         """

@@ -2,6 +2,7 @@
 from flask import Blueprint, render_template, request, redirect, send_from_directory
 from modules.image_processing import ImageProcessor
 from modules.digit_recognition import DigitRecognizer
+from modules.debug import DebugVisualizer
 from modules.board_display import draw_sudoku_board
 import os
 
@@ -20,6 +21,10 @@ def home():
 
 @main_bp.route('/upload', methods=['POST'])
 def upload_file():
+
+    # Initialize DebugVisualizer instance
+    debug = DebugVisualizer()
+
     if 'file' not in request.files:
         return redirect(request.url)
 
@@ -33,22 +38,19 @@ def upload_file():
         file_path = os.path.join('uploads/', file.filename)
         file.save(file_path)
 
-        # Step 1: Process the image and extract the Sudoku board
-        processor = ImageProcessor(file_path)
-
         try:
-            processor.find_board(debug=True)  # Extract top-down view
-            processor.save_warped_board()  # Save the top-down view of the board
+            # Step 1: Process the image and extract the Sudoku board
+            processor = ImageProcessor(file_path, debug)
+            puzzle_cells = processor.run()
 
-            # Step 2: Extract Sudoku cells
-            puzzle_cells = processor.extract_digits_from_cells(debug=False)  # Extract cells with digits
-
-            # Step 3: Convert extracted digits into a Sudoku board
+            # Step 2: Convert extracted digits into a Sudoku board
             recognizer = DigitRecognizer(model_path="models/sudoku_digit_recognizer.keras")
             board = recognizer.cells_to_digits(puzzle_cells)
 
             # Save a JPG of the unsolved board
             draw_sudoku_board(board, solved=False)
+
+            # debug.show_images()
 
             # Render the solution page
             return render_template('solution.html',
