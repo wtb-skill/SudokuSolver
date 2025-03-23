@@ -102,22 +102,8 @@ class ImageProcessor:
 
         return None
 
-    # def save_warped_board(self, save_path: str = 'uploads/warped_sudoku_board.jpg') -> str:
-    #     """
-    #     Saves the warped Sudoku board.
-    #     Parameters:
-    #         save_path (str): Path to the input Sudoku image.
-    #
-    #     Returns:
-    #         Tuple[np.ndarray, str]: The warped (grayscale) top-down view of board image.
-    #     """
-    #     if self.warped_board is None:
-    #         raise ValueError("Warped board is not generated yet. Run find_puzzle() first.")
-    #
-    #     cv2.imwrite(save_path, self.warped_board)
-    #     return save_path
-
-    def _extract_digit(self, cell: np.ndarray) -> Optional[np.ndarray]:
+    @staticmethod
+    def _extract_digit(cell: np.ndarray) -> Optional[np.ndarray]:
         """
         Extracts the digit from a Sudoku cell.
         """
@@ -153,7 +139,7 @@ class ImageProcessor:
 
         return digit
 
-    def split_into_cells(self, grid_size=9):
+    def _split_into_cells(self, grid_size=9):
         """
         Divides the Sudoku puzzle into (81) cells.
         """
@@ -176,7 +162,7 @@ class ImageProcessor:
         Extracts digits from each cell in the provided 9x9 grid.
         Returns a 9x9 list with extracted digits or None for empty cells.
         """
-        puzzle_cells = self.split_into_cells()
+        puzzle_cells = self._split_into_cells()
         digits = [[self._extract_digit(cell) for cell in row] for row in puzzle_cells]
 
         self._show_extracted_cells(digits)
@@ -201,9 +187,6 @@ class ImageProcessor:
     def run(self):
         """
         Executes the full pipeline to process the Sudoku image step by step.
-        Parameters:
-            save_warped (bool): Whether to save the warped board image.
-            debug (bool): Whether to enable debug visualizations.
         """
         try:
             print("[INFO] Preprocessing the image...")

@@ -50,7 +50,7 @@ def upload_file():
             # Save a JPG of the unsolved board
             draw_sudoku_board(board, solved=False)
 
-            # debug.show_images()
+            debug.show_images()
 
             # Render the solution page
             return render_template('solution.html',
