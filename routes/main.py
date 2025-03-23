@@ -3,7 +3,7 @@ from flask import Blueprint, render_template, request, redirect, send_from_direc
 from modules.image_processing import SudokuImageProcessor
 from modules.digit_recognition import SudokuDigitRecognizer
 from modules.debug import DebugVisualizer
-from modules.board_display import draw_sudoku_board
+from modules.board_display import SudokuBoardDisplay
 import os
 
 
@@ -48,7 +48,8 @@ def upload_file():
             board = recognizer.convert_cells_to_digits(preprocessed_digit_images)
 
             # Save a JPG of the unsolved board
-            draw_sudoku_board(board, solved=False)
+            unsolved_board = SudokuBoardDisplay(debug)
+            unsolved_board.draw_sudoku_board(board, solved=False)
 
             debug.display_images_in_grid()
 
