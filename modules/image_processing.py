@@ -5,6 +5,7 @@ import imutils
 from modules.debug import DebugVisualizer
 from skimage.segmentation import clear_border
 from imutils.perspective import four_point_transform
+from tensorflow.keras.preprocessing.image import img_to_array
 from typing import Tuple, Optional, List
 
 
@@ -184,6 +185,45 @@ class ImageProcessor:
         # Store the extracted digits grid in DebugVisualizer
         self.debug.add_image("4_Extracted_Digits", grid_image)
 
+    def _preprocess_cell(self, cell: np.ndarray) -> np.ndarray:
+        """
+        Preprocesses a Sudoku cell image for digit recognition.
+
+        Parameters:
+            cell (np.ndarray): The image of a digit.
+
+        Returns:
+            np.ndarray: Preprocessed image ready for model prediction.
+        """
+        roi = cv2.resize(cell, (28, 28))  # Resize to 28x28 pixels
+        roi = roi.astype("float") / 255.0  # Normalize pixel values to [0,1]
+        roi = img_to_array(roi)  # Convert image to array
+        roi = np.expand_dims(roi, axis=0)  # Add batch dimension
+        return roi
+
+    def preprocess_cells(self, extracted_digits: List[List[Optional[np.ndarray]]]) -> List[List[Optional[np.ndarray]]]:
+        """
+        Preprocesses the extracted digits from each cell using _preprocess_cell.
+
+        Parameters:
+            extracted_digits (list): A 2D list of extracted Sudoku cells.
+
+        Returns:
+            list: A 2D list of preprocessed cells (ready for model prediction).
+        """
+        preprocessed_digits = []
+
+        for row in extracted_digits:
+            preprocessed_row = []
+            for cell in row:
+                if cell is not None:
+                    preprocessed_row.append(self._preprocess_cell(cell))  # Preprocess non-empty cells
+                else:
+                    preprocessed_row.append(None)  # Keep empty cells as None
+            preprocessed_digits.append(preprocessed_row)
+
+        return preprocessed_digits
+
     def run(self):
         """
         Executes the full pipeline to process the Sudoku image step by step.
@@ -198,8 +238,11 @@ class ImageProcessor:
             print("[INFO] Extracting digits from cells...")
             extracted_digits = self.extract_digits_from_cells()
 
+            print("[INFO] Preprocessing cells with digits...")
+            preprocessed_digits = self.preprocess_cells(extracted_digits)
+
             print("[SUCCESS] Image processing completed.")
-            return extracted_digits  # Return the extracted digit grid
+            return preprocessed_digits  # Return the extracted digit grid
 
         except Exception as e:
             print(f"[ERROR] {e}")

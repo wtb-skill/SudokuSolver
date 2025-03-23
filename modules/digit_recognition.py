@@ -1,8 +1,6 @@
 # modules/digit_recognition.py
-from tensorflow.keras.preprocessing.image import img_to_array
 from tensorflow.keras.models import load_model
 import numpy as np
-import cv2
 
 
 class DigitRecognizer:
@@ -15,21 +13,6 @@ class DigitRecognizer:
         """
         self.model = load_model(model_path)
 
-    def _preprocess_cell(self, cell: np.ndarray) -> np.ndarray:
-        """
-        Preprocesses a Sudoku cell image for digit recognition.
-
-        Parameters:
-            cell (np.ndarray): The image of a digit.
-
-        Returns:
-            np.ndarray: Preprocessed image ready for model prediction.
-        """
-        roi = cv2.resize(cell, (28, 28))  # Resize to 28x28 pixels
-        roi = roi.astype("float") / 255.0  # Normalize pixel values to [0,1]
-        roi = img_to_array(roi)  # Convert image to array
-        roi = np.expand_dims(roi, axis=0)  # Add batch dimension
-        return roi
 
     def _predict_digit(self, cell: np.ndarray) -> int:
         """
@@ -41,8 +24,7 @@ class DigitRecognizer:
         Returns:
             int: The predicted digit (0-9, where 0 represents an empty cell).
         """
-        roi = self._preprocess_cell(cell)
-        pred = self.model.predict(roi).argmax(axis=1)[0]
+        pred = self.model.predict(cell).argmax(axis=1)[0]
         return pred
 
     def cells_to_digits(self, puzzle_cells: list) -> np.ndarray:
