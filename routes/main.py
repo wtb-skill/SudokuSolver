@@ -39,13 +39,13 @@ def upload_file():
         file.save(file_path)
 
         try:
-            # Step 1: Process the image and extract the Sudoku board
+            # Step 1: Process the image and extract the 2D list of digit images
             processor = SudokuImageProcessor(file_path, debug)
-            preprocessed_images_of_digits = processor.process_sudoku_image()
+            preprocessed_digit_images = processor.process_sudoku_image()
 
             # Step 2: Convert extracted digits into a Sudoku board
             recognizer = SudokuDigitRecognizer(model_path="models/sudoku_digit_recognizer.keras")
-            board = recognizer.convert_cells_to_digits(preprocessed_images_of_digits)
+            board = recognizer.convert_cells_to_digits(preprocessed_digit_images)
 
             # Save a JPG of the unsolved board
             draw_sudoku_board(board, solved=False)

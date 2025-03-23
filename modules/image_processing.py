@@ -187,10 +187,10 @@ class SudokuImageProcessor:
             extracted_digits = self.extract_digits_from_cells()
 
             print("[INFO] Preprocessing the extracted cells...")
-            preprocessed_images_of_digits = self.preprocess_extracted_digits(extracted_digits)
+            preprocessed_digit_images = self.preprocess_extracted_digits(extracted_digits)
 
             print("[SUCCESS] Sudoku image processing completed.")
-            return preprocessed_images_of_digits
+            return preprocessed_digit_images
 
         except Exception as e:
             print(f"[ERROR] {e}")
