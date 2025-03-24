@@ -1,6 +1,7 @@
 #modules/debug.py
 import os
 import cv2
+import io
 import numpy as np
 
 
@@ -109,3 +110,18 @@ class DebugVisualizer:
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
+    def get_image_bytes(self, step_name: str):
+        """
+        Retrieve an image as bytes for serving in Flask.
+
+        Parameters:
+            step_name (str): The name of the debug step.
+
+        Returns:
+            Flask response: Image file response or None if not found.
+        """
+        if step_name not in self.images:
+            return None  # Return None if image not found
+
+        _, img_encoded = cv2.imencode('.jpg', self.images[step_name])  # Encode image as JPEG
+        return io.BytesIO(img_encoded.tobytes())  # Convert to BytesIO for Flask serving

@@ -1,5 +1,5 @@
 # main.py
-from flask import Blueprint, render_template, request, redirect, send_from_directory
+from flask import Blueprint, render_template, request, redirect, send_from_directory, send_file, abort
 from modules.image_processing import SudokuImageProcessor
 from modules.digit_recognition import SudokuDigitRecognizer
 from modules.debug import DebugVisualizer
@@ -13,6 +13,8 @@ main_bp = Blueprint('main', __name__)
 # Ensure the uploads folder exists
 os.makedirs('uploads', exist_ok=True)
 
+# Initialize DebugVisualizer instance
+debug = DebugVisualizer()
 
 @main_bp.route('/')
 def home():
@@ -21,10 +23,6 @@ def home():
 
 @main_bp.route('/upload', methods=['POST'])
 def upload_file():
-
-    # Initialize DebugVisualizer instance
-    debug = DebugVisualizer()
-
     if 'file' not in request.files:
         return redirect(request.url)
 
@@ -34,13 +32,10 @@ def upload_file():
         return redirect(request.url)
 
     if file:
-        # Save the uploaded file
-        file_path = os.path.join('uploads/', file.filename)
-        file.save(file_path)
 
         try:
             # Step 1: Process the image and extract the 2D list of digit images
-            processor = SudokuImageProcessor(file_path, debug)
+            processor = SudokuImageProcessor(file, debug)
             preprocessed_digit_images = processor.process_sudoku_image()
 
             # Step 2: Convert extracted digits into a Sudoku board
@@ -65,3 +60,20 @@ def upload_file():
 @main_bp.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory('uploads', filename)
+
+@main_bp.route('/debug-image/<step_name>')
+def get_debug_image(step_name):
+    """
+    Serves a debug image directly from memory.
+
+    Parameters:
+        step_name (str): Name of the image stored in DebugVisualizer.
+
+    Returns:
+        Flask response with image data.
+    """
+    image_bytes = debug.get_image_bytes(step_name)
+    if image_bytes is None:
+        abort(404)  # Return 404 if the image is not found
+
+    return send_file(image_bytes, mimetype='image/jpeg')

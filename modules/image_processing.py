@@ -9,14 +9,16 @@ from typing import Tuple, Optional, List
 
 
 class SudokuImageProcessor:
-    def __init__(self, image_path: str, debug: DebugVisualizer):
+    def __init__(self, image_file, debug: DebugVisualizer):
         """
         Initialize the image processor with an image path and preprocess the image.
         """
-        self.image_path = image_path
-        self.original_image = cv2.imread(image_path)
         self.debug = debug
         self.sudoku_board = None
+
+        # Decode the image from the uploaded file
+        file_bytes = np.frombuffer(image_file.read(), np.uint8)
+        self.original_image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
 
         if self.original_image is None:
             raise ValueError("Image could not be loaded. Check the file path.")
