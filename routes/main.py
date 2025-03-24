@@ -38,19 +38,18 @@ def upload_file():
             processor = SudokuImageProcessor(file, debug)
             preprocessed_digit_images = processor.process_sudoku_image()
 
-            # Step 2: Convert extracted digits into a Sudoku board
+            # Step 2: Categorize digit images into actual numbers
             recognizer = SudokuDigitRecognizer(model_path="models/sudoku_digit_recognizer.keras")
             board = recognizer.convert_cells_to_digits(preprocessed_digit_images)
 
-            # Save a JPG of the unsolved board
+            # Create an image of the unsolved board
             unsolved_board = SudokuBoardDisplay(debug)
             unsolved_board.draw_sudoku_board(board, solved=False)
 
             debug.display_images_in_grid()
 
             # Render the solution page
-            return render_template('solution.html',
-                                   filename=file.filename)
+            return render_template('solution.html')
 
         except Exception as e:
             return f"Error processing image: {str(e)}"
