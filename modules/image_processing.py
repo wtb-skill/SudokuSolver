@@ -26,7 +26,7 @@ class SudokuImageProcessor:
         self.original_image = imutils.resize(self.original_image, width=600)  # Resize for easier processing
         self.debug.add_image("Original_Image", self.original_image)
 
-    def preprocess_image_for_edge_detection(self) -> None:
+    def _preprocess_image_for_edge_detection(self) -> None:
         """
         Convert the image to grayscale, apply Gaussian blur, and perform edge detection.
         """
@@ -40,7 +40,7 @@ class SudokuImageProcessor:
 
         return None
 
-    def detect_sudoku_board_contour(self) -> None:
+    def _detect_sudoku_board_contour(self) -> None:
         """
         Detect the Sudoku puzzle's outline from the image using contours.
         """
@@ -81,7 +81,7 @@ class SudokuImageProcessor:
         return None
 
     @staticmethod
-    def extract_digit_from_cell(cell_image: np.ndarray) -> Optional[np.ndarray]:
+    def _extract_digit_from_cell(cell_image: np.ndarray) -> Optional[np.ndarray]:
         """
         Extracts the digit from a single Sudoku cell, if present.
         """
@@ -109,7 +109,7 @@ class SudokuImageProcessor:
 
         return digit_image
 
-    def split_sudoku_board_into_cells(self, grid_size=9) -> List[List[np.ndarray]]:
+    def _split_sudoku_board_into_cells(self, grid_size=9) -> List[List[np.ndarray]]:
         """
         Split the warped Sudoku board image into individual cells.
         """
@@ -122,20 +122,20 @@ class SudokuImageProcessor:
 
         return cells
 
-    def extract_digits_from_cells(self) -> List[List[Optional[np.ndarray]]]:
+    def _extract_digits_from_cells(self) -> List[List[Optional[np.ndarray]]]:
         """
         Extracts digits from each cell of the 9x9 Sudoku grid.
         """
-        puzzle_cells = self.split_sudoku_board_into_cells()
+        puzzle_cells = self._split_sudoku_board_into_cells()
         extracted_digits = [
-            [self.extract_digit_from_cell(cell) for cell in row] for row in puzzle_cells
+            [self._extract_digit_from_cell(cell) for cell in row] for row in puzzle_cells
         ]
 
-        self.display_extracted_digits(extracted_digits)
+        self._display_extracted_digits(extracted_digits)
 
         return extracted_digits
 
-    def display_extracted_digits(self, extracted_cells: List[List[Optional[np.ndarray]]]) -> None:
+    def _display_extracted_digits(self, extracted_cells: List[List[Optional[np.ndarray]]]) -> None:
         """
         Visualizes the extracted digits from each cell.
         """
@@ -151,7 +151,7 @@ class SudokuImageProcessor:
         self.debug.add_image("Extracted_Digits_Grid", grid_image)
 
     @staticmethod
-    def preprocess_cell_image(cell_image: np.ndarray) -> np.ndarray:
+    def _preprocess_cell_image(cell_image: np.ndarray) -> np.ndarray:
         """
         Preprocess a Sudoku cell image for recognition.
         """
@@ -161,7 +161,7 @@ class SudokuImageProcessor:
         cell_array = np.expand_dims(cell_array, axis=0)  # Add batch dimension
         return cell_array
 
-    def preprocess_extracted_digits(self, extracted_digits: List[List[Optional[np.ndarray]]]) -> List[List[Optional[np.ndarray]]]:
+    def _preprocess_extracted_digits(self, extracted_digits: List[List[Optional[np.ndarray]]]) -> List[List[Optional[np.ndarray]]]:
         """
         Preprocesses the extracted digits from the Sudoku cells for model prediction.
         """
@@ -169,7 +169,7 @@ class SudokuImageProcessor:
 
         for row in extracted_digits:
             preprocessed_row = [
-                self.preprocess_cell_image(cell) if cell is not None else None for cell in row
+                self._preprocess_cell_image(cell) if cell is not None else None for cell in row
             ]
             preprocessed_cells.append(preprocessed_row)
 
@@ -181,16 +181,16 @@ class SudokuImageProcessor:
         """
         try:
             print("[INFO] Preprocessing the image...")
-            self.preprocess_image_for_edge_detection()
+            self._preprocess_image_for_edge_detection()
 
             print("[INFO] Detecting Sudoku board...")
-            self.detect_sudoku_board_contour()
+            self._detect_sudoku_board_contour()
 
             print("[INFO] Extracting digits from Sudoku cells...")
-            extracted_digits = self.extract_digits_from_cells()
+            extracted_digits = self._extract_digits_from_cells()
 
             print("[INFO] Preprocessing the extracted cells...")
-            preprocessed_digit_images = self.preprocess_extracted_digits(extracted_digits)
+            preprocessed_digit_images = self._preprocess_extracted_digits(extracted_digits)
 
             print("[SUCCESS] Sudoku image processing completed.")
             return preprocessed_digit_images
