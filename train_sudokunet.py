@@ -1,6 +1,6 @@
 # train_sudokunet.py
 import os
-os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"  # Disable oneDNN optimizations
+# os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"  # Disable oneDNN optimizations
 from Sudokunet import SudokuNet
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.datasets import mnist
