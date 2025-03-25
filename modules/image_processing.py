@@ -143,7 +143,7 @@ class SudokuImageProcessor:
 
         for row in extracted_cells:
             resized_cells = [
-                cv2.resize(cell, (28, 28)) if cell is not None else np.zeros((28, 28), dtype="uint8") for cell in row
+                cv2.resize(cell, (32, 32)) if cell is not None else np.zeros((32, 32), dtype="uint8") for cell in row
             ]
             row_image = np.concatenate(resized_cells, axis=1)
             grid_image = row_image if grid_image is None else np.concatenate([grid_image, row_image], axis=0)
@@ -155,7 +155,7 @@ class SudokuImageProcessor:
         """
         Preprocess a Sudoku cell image for recognition.
         """
-        resized_cell = cv2.resize(cell_image, (28, 28))  # Resize to 28x28 pixels
+        resized_cell = cv2.resize(cell_image, (32, 32))  # Resize to 32x32 pixels (to match model's dataset)
         normalized_cell = resized_cell.astype("float") / 255.0  # Normalize pixel values to [0,1]
         cell_array = img_to_array(normalized_cell)  # Convert to array
         cell_array = np.expand_dims(cell_array, axis=0)  # Add batch dimension
