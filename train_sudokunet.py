@@ -3,12 +3,12 @@ import os
 # os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"  # Disable oneDNN optimizations
 from Sudokunet import SudokuNet
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.datasets import mnist
 from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.models import Model
 from sklearn.metrics import classification_report
 import argparse
 import numpy as np
-from tensorflow.keras.models import Model
+import cv2
 
 
 def parse_arguments() -> dict:
@@ -22,35 +22,66 @@ def parse_arguments() -> dict:
     ap.add_argument("-m", "--model", required=True, help="Path to output model after training")
     return vars(ap.parse_args())
 
-
-def preprocess_data() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def load_custom_dataset(dataset_path: str, image_size: int = 32):
     """
-    Loads and preprocesses the MNIST dataset.
+    Loads the custom dataset from the specified directory with progress messages.
 
-    Returns:
-        tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        - trainData: Training images, reshaped and normalized.
-        - trainLabels: One-hot encoded training labels.
-        - testData: Test images, reshaped and normalized.
-        - testLabels: One-hot encoded test labels.
+    :param dataset_path: Path to the dataset directory.
+    :param image_size: The target size of images (assumes square images).
+    :return: (trainData, trainLabels, testData, testLabels)
     """
-    print("[INFO] Accessing MNIST dataset...")
-    (trainData, trainLabels), (testData, testLabels) = mnist.load_data()
+    print("[INFO] Accessing the custom dataset...")
 
-    # Add a channel dimension (grayscale)
-    trainData = trainData.reshape((trainData.shape[0], 28, 28, 1))
-    testData = testData.reshape((testData.shape[0], 28, 28, 1))
+    data = []
+    labels = []
 
-    # Normalize data to the range [0, 1]
-    trainData = trainData.astype("float32") / 255.0
-    testData = testData.astype("float32") / 255.0
+    # Loop through digit folders (1-9)
+    for digit in range(1, 10):  # Your dataset uses 1-9
+        digit_path = os.path.join(dataset_path, str(digit))
 
-    # Convert labels to one-hot encoded vectors
-    trainLabels = to_categorical(trainLabels, num_classes=10)
-    testLabels = to_categorical(testLabels, num_classes=10)
-    # le = LabelBinarizer()
-    # trainLabels = le.fit_transform(trainLabels)
-    # testLabels = le.transform(testLabels)
+        if not os.path.exists(digit_path):
+            print(f"[WARNING] Skipping {digit_path} (Folder not found)")
+            continue
+
+        print(f"[INFO] Processing digit '{digit}'...")  # Show progress
+
+        digit_images = os.listdir(digit_path)
+        print(f"   - Found {len(digit_images)} images for digit {digit}")
+
+        for i, image_name in enumerate(digit_images):
+            img_path = os.path.join(digit_path, image_name)
+            img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)  # Load as grayscale
+            img = cv2.resize(img, (image_size, image_size))  # Resize to match training size
+            img = img.astype("float32") / 255.0  # Normalize to [0, 1]
+            img = np.expand_dims(img, axis=-1)  # Add channel dimension
+
+            data.append(img)
+            labels.append(digit - 1)  # labels (1-9)
+
+            # Print progress every 1000 images (optional)
+            if i % 1000 == 0 and i > 0:
+                print(f"     - Processed {i} images for digit {digit}...")
+
+    # Convert to numpy arrays
+    data = np.array(data)
+    labels = np.array(labels)
+
+    # One-hot encode labels
+    labels = to_categorical(labels, num_classes=9)  # 9 classes
+    print(f"[INFO] Total dataset size: {len(data)} images")
+
+    # Shuffle data
+    print("[INFO] Shuffling dataset...")
+    indices = np.arange(len(data))
+    np.random.shuffle(indices)
+    data, labels = data[indices], labels[indices]
+
+    # Split into train/test sets (e.g., 80% train, 20% test)
+    split_index = int(0.8 * len(data))
+    trainData, testData = data[:split_index], data[split_index:]
+    trainLabels, testLabels = labels[:split_index], labels[split_index:]
+
+    print(f"[INFO] Dataset split into {len(trainData)} training and {len(testData)} testing images")
 
     return trainData, trainLabels, testData, testLabels
 
@@ -115,10 +146,16 @@ def evaluate_model(model: Model, testData: np.ndarray, testLabels: np.ndarray) -
     """
     print("[INFO] Evaluating network...")
     predictions = model.predict(testData)
+
+    # Convert one-hot encoded labels back to integers
+    test_labels = testLabels.argmax(axis=1)
+    predictions = predictions.argmax(axis=1)
+
+    # The labels are from 1 to 9, so we want target_names to reflect that range.
     print(classification_report(
-        testLabels.argmax(axis=1),  # Convert one-hot encoded labels back to integers
-        predictions.argmax(axis=1),  # Convert predictions to integer labels
-        target_names=[str(x) for x in range(10)]  # Label names ('0' to '9')
+        test_labels,  # Ground truth labels
+        predictions,  # Predicted labels
+        target_names=[str(x) for x in range(1, 10)]  # Label names ('1' to '9')
     ))
 
 
@@ -142,10 +179,12 @@ if __name__ == "__main__":
     BS = 128  # Batch size
 
     # Load and preprocess data
-    trainData, trainLabels, testData, testLabels = preprocess_data()
+    # trainData, trainLabels, testData, testLabels = preprocess_data()
+    DATASET_PATH = "generate_model/digit_dataset"  # Path to your generated dataset
+    trainData, trainLabels, testData, testLabels = load_custom_dataset(DATASET_PATH, image_size=32)
 
     # Compile model
-    model = compile_model(INIT_LR, width=28, height=28, depth=1, classes=10)
+    model = compile_model(INIT_LR, width=32, height=32, depth=1, classes=9)
 
     # Train model
     model = train_model(model, trainData, trainLabels, testData, testLabels, batch_size=BS, epochs=EPOCHS)
