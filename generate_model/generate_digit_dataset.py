@@ -119,12 +119,24 @@ class DigitDatasetGenerator:
         return img_np
 
     def generate_images(self):
+        """
+        Generates a dataset of clean and distorted digit images.
+
+        - Creates subdirectories for each digit (1-9).
+        - Generates clean images using specified fonts.
+        - Generates distorted images by applying various transformations.
+        """
+        print("[INFO] Starting dataset generation...")
+
         for digit in range(1, 10):
             digit_dir = os.path.join(self.output_dir, str(digit))
             os.makedirs(digit_dir, exist_ok=True)
+            print(f"[INFO] Generating images for digit '{digit}' in {digit_dir}")
 
             # Generate clean images (based on clean_proportion)
             num_clean = int(self.num_samples * self.clean_proportion)
+            print(f"[INFO] Generating {num_clean} clean images for digit '{digit}'")
+
             for i in range(num_clean):
                 font_path = random.choice(self.font_paths)
                 img_np = self.create_digit_image(digit, font_path)
@@ -132,8 +144,12 @@ class DigitDatasetGenerator:
                 save_path = os.path.join(digit_dir, f"clean_{i}.png")
                 cv2.imwrite(save_path, img_np)
 
+            print(f"[INFO] {num_clean} clean images saved for digit '{digit}'")
+
             # Generate distorted images (remaining samples)
             num_distorted = self.num_samples - num_clean
+            print(f"[INFO] Generating {num_distorted} distorted images for digit '{digit}'")
+
             for i in range(num_distorted):
                 font_path = random.choice(self.font_paths)
                 img_np = self.create_digit_image(digit, font_path)
@@ -147,9 +163,12 @@ class DigitDatasetGenerator:
                 save_path = os.path.join(digit_dir, f"distorted_{i}.png")
                 cv2.imwrite(save_path, img_np)
 
-        print("Dataset generation complete!")
+            print(f"[INFO] {num_distorted} distorted images saved for digit '{digit}'")
+
+        print("[INFO] Dataset generation complete!")
 
 
 if __name__ == "__main__":
-    generator = DigitDatasetGenerator(num_samples=10000, clean_proportion=0.4)  # Example: 40% clean, 60% distorted
+    generator = DigitDatasetGenerator(num_samples=2000, clean_proportion=0.2,
+                                      output_dir="test_dataset")  # Example: 40% clean, 60% distorted
     generator.generate_images()
