@@ -40,6 +40,10 @@ button:hover {
     background-color: #5dade2; /* Slightly darker blue on hover */
 }
 
+.logo-image {
+    padding-top: 20px;  /* Adjust the padding value as needed */
+}
+
 /* Image styling */
 img {
     max-width: 180%; /* Double the size */
