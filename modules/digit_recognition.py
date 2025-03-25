@@ -24,7 +24,7 @@ class SudokuDigitRecognizer:
             int: The predicted digit (0-9, where 0 represents an empty cell).
         """
         prediction = self.model.predict(cell).argmax(axis=1)[0]
-        return prediction
+        return prediction + 1
 
     def convert_cells_to_digits (self, extracted_cells: list) -> np.ndarray:
         """
