@@ -160,3 +160,6 @@ cython_debug/
 .idea/
 uploads/
 archive
+debug_images
+generate_model/digit_dataset
+generate_model/fonts
