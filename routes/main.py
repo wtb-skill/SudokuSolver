@@ -1,10 +1,14 @@
 # main.py
+import os
+
+# Suppress TensorFlow oneDNN warnings
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
 from flask import Blueprint, render_template, request, redirect, send_from_directory, send_file, abort
 from modules.image_processing import SudokuImageProcessor
 from modules.digit_recognition import SudokuDigitRecognizer
 from modules.debug import DebugVisualizer
 from modules.board_display import SudokuBoardDisplay
-import os
 
 
 # Initialize Blueprint

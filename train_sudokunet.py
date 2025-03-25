@@ -1,6 +1,4 @@
 # train_sudokunet.py
-import os
-# os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"  # Disable oneDNN optimizations
 from Sudokunet import SudokuNet
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import to_categorical
@@ -9,7 +7,7 @@ from sklearn.metrics import classification_report
 import argparse
 import numpy as np
 import cv2
-
+import os
 
 def parse_arguments() -> dict:
     """
