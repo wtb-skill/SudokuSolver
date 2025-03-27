@@ -1,8 +1,8 @@
 # train_sudokunet.py
 from Sudokunet import SudokuNet
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.models import Model
+from keras.api.optimizers import Adam
+from keras.api.utils import to_categorical
+from keras.api.models import Model
 from sklearn.metrics import classification_report
 import argparse
 import numpy as np

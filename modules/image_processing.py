@@ -5,7 +5,7 @@ import imutils
 from modules.debug import DebugVisualizer
 from skimage.segmentation import clear_border
 from imutils.perspective import four_point_transform
-from tensorflow.keras.preprocessing.image import img_to_array
+from keras.api.preprocessing.image import img_to_array
 from typing import Tuple, Optional, List
 
 

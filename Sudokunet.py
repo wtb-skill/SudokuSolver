@@ -1,6 +1,6 @@
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Activation, Flatten, Dense, Dropout, Input
-from tensorflow.keras.models import Model
+from keras.api.models import Sequential
+from keras.api.layers import Conv2D, MaxPooling2D, Activation, Flatten, Dense, Dropout, Input
+from keras.api.models import Model
 
 
 class SudokuNet:

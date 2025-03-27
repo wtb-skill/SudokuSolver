@@ -1,5 +1,5 @@
 # modules/digit_recognition.py
-from tensorflow.keras.models import load_model
+from keras.api.models import load_model
 import numpy as np
 
 

@@ -4,10 +4,10 @@ import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 import cv2
-from tensorflow.keras.models import load_model
-from tensorflow.keras.utils import to_categorical
+from keras.api.models import load_model
+from keras.api.utils import to_categorical
 from sklearn.metrics import classification_report, confusion_matrix
-from tensorflow.keras.preprocessing.image import img_to_array
+from keras.api.preprocessing.image import img_to_array
 
 
 class ModelEvaluator:
