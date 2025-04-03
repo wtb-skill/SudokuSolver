@@ -12,6 +12,7 @@ class DebugVisualizer:
         """
         self.output_dir = output_dir
         self.images = {}  # Dictionary to store step-name -> image
+        self.grid_image = None  # Store the grid image separately
 
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
@@ -26,8 +27,13 @@ class DebugVisualizer:
         """
         Save all stored debug images to the output directory.
         """
+        # Save all individual images
         for step, img in self.images.items():
             cv2.imwrite(os.path.join(self.output_dir, f"{step}.png"), img)
+
+        # Save the grid image if it exists
+        if self.grid_image is not None:
+            cv2.imwrite(os.path.join(self.output_dir, "grid_image.png"), self.grid_image)
 
     def show_images(self):
         """
@@ -103,10 +109,10 @@ class DebugVisualizer:
             rows.append(row)
 
         # Concatenate all rows vertically to form the final image grid
-        grid_image = np.vstack(rows)
+        self.grid_image = np.vstack(rows)
 
         # Display the final image
-        cv2.imshow("Debug Images", grid_image)
+        cv2.imshow("Debug Images", self.grid_image)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
