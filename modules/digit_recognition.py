@@ -51,7 +51,7 @@ class SudokuDigitRecognizer:
             for col in range(9):
                 cell = extracted_cells[row][col]
                 if cell is not None:
-                    print(f"[INFO] 🧩Prediction on cell [{row}][{col}].")
+                    print(f"[INFO] 🧩Prediction on cell [{row + 1}][{col + 1}].")
                     digit_board[row, col] = self._predict_single_digit(cell)
                 else:
                     digit_board[row, col] = 0  # Empty cell remains 0
