@@ -164,3 +164,4 @@ debug_images
 generate_model/digit_dataset
 generate_model/fonts
 generate_model/test_dataset
+generate_model/archive_fonts
