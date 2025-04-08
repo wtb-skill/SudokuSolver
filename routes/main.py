@@ -47,23 +47,28 @@ def upload_file():
             recognizer = SudokuDigitRecognizer(model_path="models/sudoku_digit_recognizer.keras")
             unsolved_board = recognizer.convert_cells_to_digits(preprocessed_digit_images)
 
+            # Create an image of the unsolved board
+            sudoku_board_display = SudokuBoardDisplay(debug)
+            sudoku_board_display.draw_unsolved_board(board=unsolved_board)
+
             # Convert the 2D digit board to a Sudoku grid string
             converter = SudokuConverter()
-            sudoku_grid = converter.board_to_string(unsolved_board)
+            sudoku_grid = converter.board_to_string(digit_board=unsolved_board)
 
             # Step 3: Solve the Sudoku puzzle
             solver = NorvigSolver()
             solved_grid = solver.solve(sudoku_grid)
 
             if not solved_grid:
+                debug.display_images_in_grid()
+                debug.save_images()
                 return "Sudoku puzzle could not be solved."
 
             # Convert the solved Sudoku string back to a 2D digit board
             solved_board = converter.dict_to_board(solved_grid)
 
-            # Create an image of the unsolved board
-            sudoku_board_display = SudokuBoardDisplay(debug)
-            sudoku_board_display.draw_boards(unsolved_board=unsolved_board, solved_board=solved_board)
+            # Create an image of the solved board
+            sudoku_board_display.draw_solved_board(unsolved_board=unsolved_board, solved_board=solved_board)
 
             debug.display_images_in_grid()
             debug.save_images()
