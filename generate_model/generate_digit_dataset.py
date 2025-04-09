@@ -169,6 +169,7 @@ class DigitDatasetGenerator:
 
 
 if __name__ == "__main__":
-    generator = DigitDatasetGenerator(num_samples=2000, clean_proportion=0.2,
-                                      output_dir="test_dataset")  # Example: 40% clean, 60% distorted
+    generator = DigitDatasetGenerator(num_samples=10000, clean_proportion=0.3,
+                                      output_dir="digit_dataset")  # Example: 40% clean, 60% distorted
+                                                                # digit_dataset or test_dataset
     generator.generate_images()

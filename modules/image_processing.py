@@ -53,7 +53,7 @@ class SudokuImageProcessor:
         contours = sorted(contours, key=cv2.contourArea, reverse=True)
 
         height, width = self.original_image.shape[:2]
-        min_contour_area = 0.3 * height * width  # 30% of the image's area
+        min_contour_area = 0.2 * height * width  # 30% of the image's area
 
         largest_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > min_contour_area]
 
