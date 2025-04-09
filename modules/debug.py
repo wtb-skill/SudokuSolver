@@ -5,7 +5,7 @@ import io
 import numpy as np
 
 
-class DebugVisualizer:
+class ImageCollector:
     def __init__(self, output_dir: str = "debug_images"):
         """
         Handles saving and displaying debug images at different stages.

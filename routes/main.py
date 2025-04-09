@@ -7,10 +7,10 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 from flask import Blueprint, render_template, request, redirect, send_from_directory, send_file, abort
 from modules.image_processing import SudokuImageProcessor
 from modules.digit_recognition import SudokuDigitRecognizer
-from modules.debug import DebugVisualizer
+from modules.debug import ImageCollector
 from modules.board_display import SudokuBoardDisplay
 from modules.solving_algorithm import NorvigSolver, SudokuConverter
-
+from modules.sudoku_image.sudoku_pipeline import SudokuPipeline
 
 # Initialize Blueprint
 main_bp = Blueprint('main', __name__)
@@ -19,7 +19,7 @@ main_bp = Blueprint('main', __name__)
 os.makedirs('uploads', exist_ok=True)
 
 # Initialize DebugVisualizer instance
-debug = DebugVisualizer()
+debug = ImageCollector()
 
 @main_bp.route('/')
 def home():
@@ -40,8 +40,10 @@ def upload_file():
 
         try:
             # Step 1: Process the image and extract the 2D list of digit images
-            processor = SudokuImageProcessor(file, debug)
-            preprocessed_digit_images = processor.process_sudoku_image()
+            # processor = SudokuImageProcessor(file, debug)
+            # preprocessed_digit_images = processor.process_sudoku_image()
+            sudoku_pipeline = SudokuPipeline(image_file=file, debug=debug)
+            preprocessed_digit_images = sudoku_pipeline.process_sudoku_image()
 
             # Step 2: Categorize digit images into actual numbers
             recognizer = SudokuDigitRecognizer(model_path="models/sudoku_digit_recognizer.keras")

@@ -1,11 +1,11 @@
 # modules/board_display.py
 import numpy as np
 import cv2
-from modules.debug import DebugVisualizer
+from modules.debug import ImageCollector
 
 
 class SudokuBoardDisplay:
-    def __init__(self, debug: DebugVisualizer = None):
+    def __init__(self, debug: ImageCollector = None):
         """
         Initializes the Sudoku board display.
 
