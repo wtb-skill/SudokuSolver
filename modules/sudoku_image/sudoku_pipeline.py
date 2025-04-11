@@ -1,7 +1,7 @@
 # modules/sudoku_pipeline.py
 import cv2
 import numpy as np
-from typing import BinaryIO
+from werkzeug.datastructures import FileStorage
 
 from modules.sudoku_image.image_preprocessor import ImagePreprocessor
 from modules.sudoku_image.board_detector import BoardDetector
@@ -17,7 +17,7 @@ class SudokuPipeline:
     board detection, digit extraction, and digit preprocessing for model input.
     """
 
-    def __init__(self, image_file: BinaryIO, image_collector: ImageCollector):
+    def __init__(self, image_file: FileStorage, image_collector: ImageCollector):
         """
         Initializes the pipeline by reading and decoding the uploaded image file.
 

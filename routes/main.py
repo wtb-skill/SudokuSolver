@@ -20,12 +20,12 @@ main_bp = Blueprint('main', __name__)
 os.makedirs('uploads', exist_ok=True)
 
 # Initialize ImageCollector instance
-debug = ImageCollector()
+image_collector = ImageCollector()
 
 @main_bp.route('/')
 def home():
     session.clear()  # Clears all session data
-    debug.reset()
+    image_collector.reset()
     return render_template('index.html')
 
 
@@ -44,19 +44,15 @@ def upload_file():
 
         try:
             # Step 1: Process the image and extract the 2D list of digit images
-            sudoku_pipeline = SudokuPipeline(image_file=file, debug=debug)
+            sudoku_pipeline = SudokuPipeline(image_file=file, image_collector=image_collector)
             preprocessed_digit_images = sudoku_pipeline.process_sudoku_image()
-
-            digits_grid = debug.digit_cells
-            # Debugging: Print size of the digits grid (rows and columns)
-            print(f"RIGHT AFTER PREPROCESSING- Digits grid size: {len(digits_grid)} rows, {len(digits_grid[0])} columns")
 
             # Step 2: Categorize digit images into actual numbers
             recognizer = SudokuDigitRecognizer(model_path="models/sudoku_digit_recognizer.keras")
             unsolved_board = recognizer.convert_cells_to_digits(preprocessed_digit_images)
 
             # Create an image of the unsolved board
-            sudoku_board_display = SudokuBoardDisplay(debug)
+            sudoku_board_display = SudokuBoardDisplay(image_collector)
             sudoku_board_display.draw_unsolved_board(board=unsolved_board)
 
             # Convert the 2D digit board to a Sudoku grid string
@@ -73,7 +69,7 @@ def upload_file():
                 # debug.save_images()
 
                 # Store the digits grid temporarily
-                digit_images = debug.digit_cells
+                digit_images = image_collector.digit_cells
                 pickled_digit_images = pickle.dumps(digit_images)  # Pickle the digit grid
                 session['digit_images'] = pickled_digit_images
 
@@ -116,7 +112,7 @@ def get_debug_image(step_name):
     Returns:
         Flask response with image data.
     """
-    image_bytes = debug.get_image_bytes(step_name)
+    image_bytes = image_collector.get_image_bytes(step_name)
     if image_bytes is None:
         print(f"Image {step_name} not found!")  # Debugging line
         abort(404)  # Return 404 if the image is not found
