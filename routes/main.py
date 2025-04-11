@@ -11,10 +11,7 @@ from modules.board_display import SudokuBoardDisplay
 from modules.solving_algorithm import NorvigSolver, SudokuConverter
 from modules.sudoku_image.sudoku_pipeline import SudokuPipeline
 from modules.user_data_collector import UserDataCollector
-import cv2
-from uuid import uuid4
 import pickle
-import base64
 
 # Initialize Blueprint
 main_bp = Blueprint('main', __name__)
