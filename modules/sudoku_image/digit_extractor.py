@@ -34,20 +34,57 @@ class DigitExtractor:
         if percent_filled < 0.01:
             return None
 
-        return cv2.bitwise_and(cleared, cleared, mask=mask)
+        digit = cv2.bitwise_and(cleared, cleared, mask=mask)
+
+        return digit
 
     def extract_digits(self):
         cells = self.split_into_cells()
-        digits = [[self.extract_digit_from_cell(cell) for cell in row] for row in cells]
 
+        # Extract digits and resize them to (32, 32)
+        digits = []
+        for row in cells:
+            digit_row = []
+            for cell in row:
+                digit = self.extract_digit_from_cell(cell)
+                if digit is not None:
+                    digit = cv2.resize(digit, (32, 32))  # Resize to 32x32 right here
+                digit_row.append(digit)
+            digits.append(digit_row)
+
+        # Visualize the digits (already resized)
         self._visualize_digits(digits)
+
+        # Collect the resized digits for later processing
+        self.debug.collect_digit_cells(digits)
 
         return digits
 
     def _visualize_digits(self, digits: List[List[Optional[np.ndarray]]]):
         grid_image = None
         for row in digits:
-            cells = [cv2.resize(cell, (32, 32)) if cell is not None else np.zeros((32, 32), dtype="uint8") for cell in row]
+            cells = [cell if cell is not None else np.zeros((32, 32), dtype="uint8") for cell in row]
             row_img = np.concatenate(cells, axis=1)
             grid_image = row_img if grid_image is None else np.concatenate([grid_image, row_img], axis=0)
         self.debug.add_image("Extracted_Digits_Grid", grid_image)
+
+    # def _collect_non_empty_cells_table(self) -> List[List[Optional[np.ndarray]]]:
+    #     """
+    #     Collect all digit images in a 2D grid where empty cells are None,
+    #     and non-empty cells are 32x32 images.
+    #     """
+    #     result_grid = []
+    #     cells = self.split_into_cells()
+    #
+    #     for row in cells:
+    #         row_digits = []
+    #         for cell in row:
+    #             digit = self.extract_digit_from_cell(cell)
+    #             if digit is not None:
+    #                 digit = cv2.resize(digit, (32, 32))
+    #             row_digits.append(digit)
+    #         result_grid.append(row_digits)
+    #
+    #     self.debug.collect_digit_cells(result_grid)
+    #
+    #     return result_grid

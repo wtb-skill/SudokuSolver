@@ -4,13 +4,17 @@ import os
 # Suppress TensorFlow oneDNN warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-from flask import Blueprint, render_template, request, redirect, send_from_directory, send_file, abort
-from modules.image_processing import SudokuImageProcessor
+from flask import Blueprint, render_template, request, redirect, send_from_directory, send_file, abort, session
 from modules.digit_recognition import SudokuDigitRecognizer
 from modules.debug import ImageCollector
 from modules.board_display import SudokuBoardDisplay
 from modules.solving_algorithm import NorvigSolver, SudokuConverter
 from modules.sudoku_image.sudoku_pipeline import SudokuPipeline
+from modules.user_data_collector import UserDataCollector
+import cv2
+from uuid import uuid4
+import pickle
+import base64
 
 # Initialize Blueprint
 main_bp = Blueprint('main', __name__)
@@ -18,16 +22,19 @@ main_bp = Blueprint('main', __name__)
 # Ensure the uploads folder exists
 os.makedirs('uploads', exist_ok=True)
 
-# Initialize DebugVisualizer instance
+# Initialize ImageCollector instance
 debug = ImageCollector()
 
 @main_bp.route('/')
 def home():
+    session.clear()  # Clears all session data
+    debug.reset()
     return render_template('index.html')
 
 
 @main_bp.route('/upload', methods=['POST'])
 def upload_file():
+
     if 'file' not in request.files:
         return redirect(request.url)
 
@@ -40,10 +47,12 @@ def upload_file():
 
         try:
             # Step 1: Process the image and extract the 2D list of digit images
-            # processor = SudokuImageProcessor(file, debug)
-            # preprocessed_digit_images = processor.process_sudoku_image()
             sudoku_pipeline = SudokuPipeline(image_file=file, debug=debug)
             preprocessed_digit_images = sudoku_pipeline.process_sudoku_image()
+
+            digits_grid = debug.digit_cells
+            # Debugging: Print size of the digits grid (rows and columns)
+            print(f"RIGHT AFTER PREPROCESSING- Digits grid size: {len(digits_grid)} rows, {len(digits_grid[0])} columns")
 
             # Step 2: Categorize digit images into actual numbers
             recognizer = SudokuDigitRecognizer(model_path="models/sudoku_digit_recognizer.keras")
@@ -62,9 +71,20 @@ def upload_file():
             solved_grid = solver.solve(sudoku_grid)
 
             if not solved_grid:
-                debug.display_images_in_grid()
-                debug.save_images()
-                return "Sudoku puzzle could not be solved."
+                # debug:
+                # debug.display_images_in_grid()
+                # debug.save_images()
+
+                # Store the digits grid temporarily
+                digit_images = debug.digit_cells
+                pickled_digit_images = pickle.dumps(digit_images)  # Pickle the digit grid
+                session['digit_images'] = pickled_digit_images
+
+                # Store the unsolved board in the session
+                session['unsolved_board'] = unsolved_board.tolist()  # Convert to list to store in session
+
+                #return "Sudoku puzzle could not be solved."
+                return render_template('no_solution.html')
 
             # Convert the solved Sudoku string back to a 2D digit board
             solved_board = converter.dict_to_board(solved_grid)
@@ -72,8 +92,9 @@ def upload_file():
             # Create an image of the solved board
             sudoku_board_display.draw_solved_board(unsolved_board=unsolved_board, solved_board=solved_board)
 
-            debug.display_images_in_grid()
-            debug.save_images()
+            # debug:
+            # debug.display_images_in_grid()
+            # debug.save_images()
 
             # Render the solution page
             return render_template('solution.html')
@@ -100,6 +121,47 @@ def get_debug_image(step_name):
     """
     image_bytes = debug.get_image_bytes(step_name)
     if image_bytes is None:
+        print(f"Image {step_name} not found!")  # Debugging line
         abort(404)  # Return 404 if the image is not found
 
     return send_file(image_bytes, mimetype='image/jpeg')
+
+
+@main_bp.route('/handle-collect-decision', methods=['POST'])
+def handle_collect_decision():
+    if request.form.get('collect_data') == 'YES':
+        # Extract unsolved board from debug
+        unsolved_board = session.pop('unsolved_board', None)
+
+        if unsolved_board is None:
+            return "Error: No unsolved board found.", 400
+
+        # Display the page with the extracted digits and sudoku grid
+        return render_template('collect_user_data.html', sudoku_grid=unsolved_board)
+
+    # If the user chooses NO, just return to the index page
+    return redirect('/')
+
+@main_bp.route('/collect-user-data', methods=['POST'])
+def collect_user_data():
+    try:
+        # Step 1: Get labels
+        labels = request.form.getlist('cell')
+        labels = [label.strip() for label in labels if label.strip().isdigit()]
+
+        # Step 2: Load and validate digit images
+        collector = UserDataCollector()
+        digit_images = collector.load_digit_images_from_session(session)
+        collector.validate_labels(digit_images, labels)
+
+        # Step 3: Save data
+        collector.save_labeled_data(digit_images, labels)
+
+        # Step 4: Cleanup
+        session.clear()
+        return redirect('/')
+
+    except ValueError as ve:
+        return str(ve), 400
+    except Exception as e:
+        return f"Unexpected error: {str(e)}", 500

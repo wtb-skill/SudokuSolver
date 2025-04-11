@@ -3,6 +3,7 @@ import os
 import cv2
 import io
 import numpy as np
+from typing import List, Optional
 
 
 class ImageCollector:
@@ -13,6 +14,7 @@ class ImageCollector:
         self.output_dir = output_dir
         self.images = {}  # Dictionary to store step-name -> image
         self.grid_image = None  # Store the grid image separately
+        self.digit_cells = []  # List to store non-empty digit images
 
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
@@ -131,3 +133,23 @@ class ImageCollector:
 
         _, img_encoded = cv2.imencode('.jpg', self.images[step_name])  # Encode image as JPEG
         return io.BytesIO(img_encoded.tobytes())  # Convert to BytesIO for Flask serving
+
+    def collect_digit_cells(self, digits: List[List[Optional[np.ndarray]]]):
+        """
+        Collect and store all non-empty digit cell images (e.g., 32x32) in memory.
+        Adds a check to ensure images are 32x32 before saving.
+        """
+        for row in digits:
+            for cell in row:
+                if cell is not None:
+                    # Check if the image is 32x32 before storing it
+                    if cell.shape != (32, 32):
+                        print(f"Invalid image found! Expected shape (32, 32), but got {cell.shape}")
+                    else:
+                        self.digit_cells.append(cell.copy())
+
+        # Debugging: Print size of the digits grid (rows and columns)
+        print(f"Digits grid size: {len(self.digit_cells)} rows, {len(self.digit_cells[0])} columns")
+
+    def reset(self):
+        self.digit_cells = []
