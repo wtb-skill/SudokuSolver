@@ -8,10 +8,11 @@
       font-family: Arial, sans-serif;
       background-color: #f5f5f5;
       display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
+      flex-direction: column; /* <-- key change */
+      align-items: center;     /* horizontal centering */
+      padding: 40px 0;         /* space from top */
       margin: 0;
+      min-height: 100vh;
     }
 
     .container {
@@ -114,7 +115,12 @@
   </style>
 </head>
 <body>
+  <!-- Top Message -->
+  <div style="text-align: center; margin-bottom: 20px;">
+    <h1>Please correct the boxes with the right values.</h1>
+  </div>
 
+  <!-- Main Content Container -->
   <div class="container">
     <!-- Display Extracted Digits Grid -->
     <div class="image">
@@ -145,6 +151,6 @@
       </form>
     </div>
   </div>
-
 </body>
+
 </html>
