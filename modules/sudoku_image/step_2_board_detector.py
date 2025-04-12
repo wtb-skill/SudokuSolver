@@ -1,4 +1,4 @@
-# modules/board_detector.py
+# modules/sudoku_image/step_2_board_detector.py
 import cv2
 import imutils
 import numpy as np

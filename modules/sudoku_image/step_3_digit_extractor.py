@@ -1,11 +1,11 @@
-# modules/digit_extractor.py
+# modules/sudoku_image/step_3_digit_extractor.py
 import cv2
 import numpy as np
 import imutils
 from skimage.segmentation import clear_border
 from typing import Optional
 from modules.debug import ImageCollector
-from modules.sudoku_image.types import DigitGrid, DigitRow, DigitImage
+from modules.types import *
 
 class DigitExtractor:
     """
@@ -104,7 +104,7 @@ class DigitExtractor:
 
         return digit_images_grid
 
-    def _visualize_digits(self, digits: DigitGrid):
+    def _visualize_digits(self, digits: DigitGrid) -> None:
         """
         Constructs a visual representation of all extracted digit images by stitching them together
         into a single grid image, mimicking the Sudoku layout. The resulting image is added to the

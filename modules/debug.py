@@ -3,153 +3,158 @@ import os
 import cv2
 import io
 import numpy as np
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 
 
 class ImageCollector:
-    def __init__(self, output_dir: str = "debug_images"):
+    """
+    Handles storing, displaying, and saving intermediate images during the Sudoku image processing pipeline.
+    Useful for visualizing processing stages such as preprocessing, digit detection, and final output.
+    """
+
+    def __init__(self, output_dir: str = "debug_images") -> None:
         """
-        Handles saving and displaying debug images at different stages.
+        Initializes the image collector, creating an output directory if it doesn't exist.
+
+        Args:
+            output_dir (str): Directory where debug images will be saved.
         """
-        self.output_dir = output_dir
-        self.images = {}  # Dictionary to store step-name -> image
-        self.grid_image = None  # Store the grid image separately
-        self.digit_cells = []  # List to store non-empty digit images
+        self.output_dir: str = output_dir
+        self.images: Dict[str, np.ndarray] = {}  # Mapping of step name to image
+        self.grid_image: Optional[np.ndarray] = None  # Optional grid visualization image
+        self.digit_cells: List[np.ndarray] = []  # Collected 32x32 digit images
 
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
-    def add_image(self, step_name: str, image: np.ndarray):
+    def add_image(self, step_name: str, image: np.ndarray) -> None:
         """
-        Store an image under a specific step name.
+        Store a debug image under a descriptive step name.
+
+        Args:
+            step_name (str): Descriptive name for the image.
+            image (np.ndarray): Image to store.
         """
         self.images[step_name] = image
 
-    def save_images(self):
+    def save_images(self) -> None:
         """
-        Save all stored debug images to the output directory.
+        Save all collected images to the output directory.
         """
-        # Save all individual images
         for step, img in self.images.items():
             cv2.imwrite(os.path.join(self.output_dir, f"{step}.png"), img)
 
-        # Save the grid image if it exists
         if self.grid_image is not None:
             cv2.imwrite(os.path.join(self.output_dir, "grid_image.png"), self.grid_image)
 
-    def show_images(self):
+    def show_images(self) -> None:
         """
-        Display all debug images sequentially.
+        Display all collected images one at a time in OpenCV windows.
         """
         for step, img in self.images.items():
             cv2.imshow(step, img)
             cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-    def resize_images(self, width: int = 450, height: int = 450):
+    def resize_images(self, width: int = 450, height: int = 450) -> None:
         """
-        Resize all stored images to the specified dimensions.
+        Resize all stored images to a consistent size.
 
-        Parameters:
-            width (int): Target width for resizing.
-            height (int): Target height for resizing.
+        Args:
+            width (int): Target width.
+            height (int): Target height.
         """
         for step, img in self.images.items():
             self.images[step] = cv2.resize(img, (width, height))
 
-    def display_images_in_grid(self, max_images_per_row: int = 4):
+    def display_images_in_grid(self, max_images_per_row: int = 4) -> None:
         """
-        Display all stored images in a single large image, arranged in a grid with labels.
+        Display all stored debug images in a single grid image with labels.
 
-        Parameters:
-            max_images_per_row (int): The maximum number of images to display in one row.
+        Args:
+            max_images_per_row (int): Number of images per row in the grid.
         """
-        # Resize all images to a consistent size
         self.resize_images(450, 450)
 
-        image_list = [(name, img) for name, img in self.images.items()]
+        image_list: List[Tuple[str, np.ndarray]] = [(name, img) for name, img in self.images.items()]
 
-        # Ensure all images have the same number of channels (convert grayscale to 3 channels)
-        for i in range(len(image_list)):
-            name, img = image_list[i]
-            if len(img.shape) == 2:  # Grayscale image (2D)
+        # Convert grayscale to BGR for consistent channel depth
+        for i, (name, img) in enumerate(image_list):
+            if len(img.shape) == 2:
                 img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
             image_list[i] = (name, img)
 
         num_images = len(image_list)
-        num_rows = (num_images // max_images_per_row) + (1 if num_images % max_images_per_row != 0 else 0)
+        num_rows = (num_images + max_images_per_row - 1) // max_images_per_row
 
-        rows = []
+        rows: List[np.ndarray] = []
 
         for i in range(num_rows):
             row_images = image_list[i * max_images_per_row:(i + 1) * max_images_per_row]
 
-            # Pad the row if necessary (to make all rows equally wide)
+            # Pad row if needed
             while len(row_images) < max_images_per_row:
-                row_images.append(("Empty", np.zeros_like(row_images[0][1])))  # Add empty images
+                blank = np.zeros_like(row_images[0][1])
+                row_images.append(("Empty", blank))
 
-            labeled_images = []
+            labeled_images: List[np.ndarray] = []
             for name, img in row_images:
-                # Create a blank space for the text label (50 pixels high)
                 label_area = np.zeros((50, img.shape[1], 3), dtype="uint8")
-
-                # Put the text label in the center of the label area
                 font = cv2.FONT_HERSHEY_SIMPLEX
-                font_scale = 1
-                font_thickness = 2
-                text_size = cv2.getTextSize(name, font, font_scale, font_thickness)[0]
+                scale, thickness = 1, 2
+                text_size = cv2.getTextSize(name, font, scale, thickness)[0]
                 text_x = (img.shape[1] - text_size[0]) // 2
                 text_y = (50 + text_size[1]) // 2
-                cv2.putText(label_area, name, (text_x, text_y), font, font_scale, (255, 255, 255), font_thickness)
+                cv2.putText(label_area, name, (text_x, text_y), font, scale, (255, 255, 255), thickness)
+                labeled_images.append(np.vstack([label_area, img]))
 
-                # Stack label area above the image
-                labeled_img = np.vstack([label_area, img])
-                labeled_images.append(labeled_img)
+            rows.append(np.hstack(labeled_images))
 
-            # Concatenate images horizontally to form a row
-            row = np.hstack(labeled_images)
-            rows.append(row)
-
-        # Concatenate all rows vertically to form the final image grid
         self.grid_image = np.vstack(rows)
 
-        # Display the final image
         cv2.imshow("Debug Images", self.grid_image)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-    def get_image_bytes(self, step_name: str):
+    def get_image_bytes(self, step_name: str) -> Optional[io.BytesIO]:
         """
-        Retrieve an image as bytes for serving in Flask.
+        Retrieve an image as a byte stream for web serving (e.g., with Flask).
 
-        Parameters:
-            step_name (str): The name of the debug step.
+        Args:
+            step_name (str): Step name used when the image was added.
 
         Returns:
-            Flask response: Image file response or None if not found.
+            Optional[io.BytesIO]: JPEG-encoded image stream or None if not found.
         """
-        if step_name not in self.images:
-            return None  # Return None if image not found
+        img = self.images.get(step_name)
+        if img is None:
+            return None
 
-        _, img_encoded = cv2.imencode('.jpg', self.images[step_name])  # Encode image as JPEG
-        return io.BytesIO(img_encoded.tobytes())  # Convert to BytesIO for Flask serving
+        _, img_encoded = cv2.imencode('.jpg', img)
+        return io.BytesIO(img_encoded.tobytes())
 
-    def collect_digit_cells(self, digits: List[List[Optional[np.ndarray]]]):
+    def collect_digit_cells(self, digits: List[List[Optional[np.ndarray]]]) -> None:
         """
-        Collect and store all non-empty digit cell images (e.g., 32x32) in memory.
-        Adds a check to ensure images are 32x32 before saving.
+        Collect all non-empty digit cell images (e.g., 32x32 grayscale) for training or inspection.
+
+        Args:
+            digits (List[List[Optional[np.ndarray]]]): 2D list of digit images or None.
         """
         for row in digits:
             for cell in row:
                 if cell is not None:
-                    # Check if the image is 32x32 before storing it
                     if cell.shape != (32, 32):
-                        print(f"Invalid image found! Expected shape (32, 32), but got {cell.shape}")
+                        print(f"[Warning] Invalid image shape: expected (32, 32), got {cell.shape}")
                     else:
                         self.digit_cells.append(cell.copy())
 
-        # Debugging: Print size of the digits grid (rows and columns)
-        print(f"Digits grid size: {len(self.digit_cells)} rows, {len(self.digit_cells[0])} columns")
+        if self.digit_cells:
+            print(f"Collected {len(self.digit_cells)} digit cell(s).")
+        else:
+            print("No valid digit cells were collected.")
 
-    def reset(self):
-        self.digit_cells = []
+    def reset(self) -> None:
+        """
+        Clear all collected digit cells.
+        """
+        self.digit_cells.clear()

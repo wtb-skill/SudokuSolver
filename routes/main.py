@@ -4,11 +4,13 @@ import os
 # Suppress TensorFlow oneDNN warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-from flask import Blueprint, render_template, request, redirect, send_from_directory, send_file, abort, session
+from flask import (Blueprint, render_template, request, redirect, send_from_directory, send_file, abort, session,
+                   Response)
 from modules.digit_recognition import SudokuDigitRecognizer
 from modules.debug import ImageCollector
 from modules.board_display import SudokuBoardDisplay
-from modules.solving_algorithm import NorvigSolver, SudokuConverter
+from modules.solving_algorithm.norvig_solver import NorvigSolver
+from modules.solving_algorithm.sudoku_converter import SudokuConverter
 from modules.sudoku_image.sudoku_pipeline import SudokuPipeline
 from modules.user_data_collector import UserDataCollector
 import pickle
@@ -23,14 +25,25 @@ os.makedirs('uploads', exist_ok=True)
 image_collector = ImageCollector()
 
 @main_bp.route('/')
-def home():
+def home() -> str:
+    """
+    Clears the session and resets the image collector, then renders the home page.
+
+    Returns:
+        str: The rendered HTML template for the home page.
+    """
     session.clear()  # Clears all session data
     image_collector.reset()
     return render_template('index.html')
 
+def upload_file() -> str or Response:
+    """
+    Handles the uploaded file, processes the Sudoku image, recognizes digits,
+    solves the Sudoku, and displays the solution or an error message.
 
-@main_bp.route('/upload', methods=['POST'])
-def upload_file():
+    Returns:
+        str: The rendered HTML template with the solution or an error message.
+    """
 
     if 'file' not in request.files:
         return redirect(request.url)
@@ -82,7 +95,7 @@ def upload_file():
             # Convert the solved Sudoku string back to a 2D digit board
             solved_board = converter.dict_to_board(solved_grid)
 
-            # Create an image of the solved board
+            # Step 4: Create an image of the solved board
             sudoku_board_display.draw_solved_board(unsolved_board=unsolved_board, solved_board=solved_board)
 
             # debug:
@@ -96,13 +109,21 @@ def upload_file():
             return f"Error processing image: {str(e)}"
 
 
-# Serve uploaded files properly from the 'uploads' directory
 @main_bp.route('/uploads/<filename>')
-def uploaded_file(filename):
+def uploaded_file(filename: str) -> Response:
+    """
+    Serves an uploaded file from the 'uploads' directory.
+
+    Parameters:
+        filename (str): The name of the file to serve.
+
+    Returns:
+        Response: The file served from the 'uploads' directory.
+    """
     return send_from_directory('uploads', filename)
 
 @main_bp.route('/debug-image/<step_name>')
-def get_debug_image(step_name):
+def get_debug_image(step_name) -> Response:
     """
     Serves a debug image directly from memory.
 
@@ -121,7 +142,13 @@ def get_debug_image(step_name):
 
 
 @main_bp.route('/handle-collect-decision', methods=['POST'])
-def handle_collect_decision():
+def handle_collect_decision() -> str or Response:
+    """
+    Handles the user's decision to either collect data or go back to the home page.
+
+    Returns:
+        str: The rendered template based on the user's decision.
+    """
     if request.form.get('collect_data') == 'YES':
         # Extract unsolved board from debug
         unsolved_board = session.pop('unsolved_board', None)
@@ -129,18 +156,22 @@ def handle_collect_decision():
         if unsolved_board is None:
             return "Error: No unsolved board found.", 400
 
-        # Display the page with the extracted digits and sudoku grid
         return render_template('collect_user_data.html', sudoku_grid=unsolved_board)
 
-    # If the user chooses NO, just return to the index page
     return redirect('/')
 
 @main_bp.route('/collect-user-data', methods=['POST'])
-def collect_user_data():
+def collect_user_data() -> str or Response:
+    """
+    Collects user-provided labels for the Sudoku puzzle and saves the labeled data.
+
+    Returns:
+        str: A message indicating the result of the operation (success or failure).
+    """
     try:
-        # Step 1: Get labels
+        # Step 1: Get labels and convert them to integers
         labels = request.form.getlist('cell')
-        labels = [label.strip() for label in labels if label.strip().isdigit()]
+        labels = [int(label.strip()) for label in labels if label.strip().isdigit()]  # Convert to integers
 
         # Step 2: Load and validate digit images
         collector = UserDataCollector()

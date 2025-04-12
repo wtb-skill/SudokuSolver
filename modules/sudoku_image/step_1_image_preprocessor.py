@@ -1,4 +1,4 @@
-# modules/sudoku_image/image_preprocessor.py
+# modules/sudoku_image/step_1_image_preprocessor.py
 import cv2
 import imutils
 import numpy as np

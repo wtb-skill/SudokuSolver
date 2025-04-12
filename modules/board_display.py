@@ -5,14 +5,14 @@ from modules.debug import ImageCollector
 
 
 class SudokuBoardDisplay:
-    def __init__(self, debug: ImageCollector = None):
+    def __init__(self, image_collector: ImageCollector):
         """
         Initializes the Sudoku board display.
 
         Parameters:
-            debug (DebugVisualizer, optional): Debugging tool to store intermediate results.
+            image_collector (DebugVisualizer, optional): Debugging tool to store intermediate results.
         """
-        self.debug = debug  # Store debug object
+        self.image_collector = image_collector  # Store image
 
     def draw_unsolved_board(self, board: np.ndarray, cell_size: int = 50, font_scale: float = 1,
                             thickness: int = 2) -> None:
@@ -49,9 +49,7 @@ class SudokuBoardDisplay:
                     cv2.putText(board_img, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0),
                                 thickness)
 
-        # Store the debug image if debugging is enabled
-        if self.debug:
-            self.debug.add_image("Unsolved_Board", board_img)
+        self.image_collector.add_image("Unsolved_Board", board_img)
 
         return None
 
@@ -66,9 +64,6 @@ class SudokuBoardDisplay:
             cell_size (int): The size of each cell in pixels. Default is 50.
             font_scale (float): The scale factor for the text size. Default is 1.
             thickness (int): The thickness of grid lines and text. Default is 2.
-
-        Returns:
-            np.ndarray: The generated Sudoku board image, highlighting the solved cells in green.
         """
         grid_size = unsolved_board.shape[0]  # 9x9
         image_size = grid_size * cell_size  # Total image size
@@ -103,9 +98,7 @@ class SudokuBoardDisplay:
                         cv2.putText(board_img, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0),
                                     thickness)  # Black color for unsolved given cells
 
-        # Store the debug image if debugging is enabled
-        if self.debug:
-            self.debug.add_image("Solved_Board", board_img)
+        self.image_collector.add_image("Solved_Board", board_img)
 
         return None
 

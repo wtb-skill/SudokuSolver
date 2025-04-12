@@ -1,8 +1,8 @@
-# modules/digit_preprocessor.py
+# modules/sudoku_image/step_4_digit_preprocessor.py
 import cv2
 import numpy as np
 from keras.api.preprocessing.image import img_to_array
-from modules.sudoku_image.types import DigitGrid, ProcessedDigitGrid
+from modules.types import *
 
 class DigitPreprocessor:
     """
@@ -24,11 +24,15 @@ class DigitPreprocessor:
             ProcessedDigitGrid: A 9x9 grid where each non-empty cell contains a preprocessed
                        4D NumPy array ready for model prediction. Empty cells remain None.
         """
-        def prep(cell: np.ndarray) -> np.ndarray:
+        def prep(cell: DigitImage) -> ProcessedDigitImage:
             resized = cv2.resize(cell, (32, 32))
             normalized = resized.astype("float") / 255.0
             arr = img_to_array(normalized)
             return np.expand_dims(arr, axis=0)
 
-        return [[prep(cell) if cell is not None else None for cell in row] for row in digits]
+        processed_grid: ProcessedDigitGrid = [
+            [prep(cell) if cell is not None else None for cell in row]
+            for row in digits
+        ]
+        return processed_grid
 

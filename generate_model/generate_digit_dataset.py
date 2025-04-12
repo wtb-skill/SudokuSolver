@@ -16,7 +16,7 @@ class DigitDatasetGenerator:
         :param image_size: Size of the generated images (width and height in pixels).
         :param output_dir: Directory where generated images will be saved.
         :param num_samples: Number of images to generate per digit.
-        :param blur_levels: List of blur levels to apply (higher values increase blurring effect).
+        :param blur_level: List of blur levels to apply (higher values increase blurring effect).
         :param shift_range: Maximum number of pixels a digit can shift randomly.
         :param rotation_range: Maximum rotation angle (in degrees) applied randomly.
         :param noise_level: Intensity of random noise added to the images.
