@@ -65,14 +65,14 @@ interactive web interface for users to upload images and view results in real ti
 │   ├── digit_recognition.py         # CNN-based digit recognition from image patches
 │   ├── debug.py                     # Tools for image collection and debugging
 │   ├── user_data_collector.py       # Handles collection and validation of user-labeled data
-│   └── sudoku_image/
-│       ├── step_1_image_preprocessor.py   # Preprocesses raw image (grayscale, blur, thresholding)
-│       ├── step_2_board_detector.py       # Detects and warps the Sudoku board from the image
-│       ├── step_3_digit_extractor.py      # Extracts digit cells from the board
-│       ├── step_4_digit_preprocessor.py   # Normalizes digits for model prediction
-│       └── sudoku_pipeline.py             # Orchestrates full Sudoku image processing pipeline
-│
-├── modules/solving_algorithm/
+│   ├── sudoku_image/
+│   │    ├── step_1_image_preprocessor.py   # Preprocesses raw image (grayscale, blur, thresholding)
+│   │    ├── step_2_board_detector.py       # Detects and warps the Sudoku board from the image
+│   │    ├── step_3_digit_extractor.py      # Extracts digit cells from the board
+│   │    ├── step_4_digit_preprocessor.py   # Normalizes digits for model prediction
+│   │    └── sudoku_pipeline.py             # Orchestrates full Sudoku image processing pipeline
+│   │
+│   ├── modules/solving_algorithm/
 │   ├── norvig_solver.py             # Norvig-style backtracking algorithm to solve Sudoku
 │   └── sudoku_converter.py          # Converts between board matrix and string/dictionary formats
 │
@@ -81,6 +81,11 @@ interactive web interface for users to upload images and view results in real ti
 │   ├── evaluation_results/          # Evaluation results and graphs
 │   ├── fonts/                       # Fonts used for synthetic digit generation
 │   ├── test_dataset/                # Dataset for model testing
+│   ├── sudoku_digit_image_extractor/
+│   │    ├── extracted_digit_images/              # Output folder containing digit images extracted from Sudoku puzzles
+│   │    ├── sudoku_images/                       # Input folder with images of real-world Sudoku puzzles
+│   │    └── sudoku_digit_image_extractor.py      # Script to extract and save digit images from real-world Sudoku examples
+│   │
 │   ├── generate_digit_dataset.py    # Script to synthesize digit images using fonts
 │   ├── model_evaluator.py           # Evaluation logic for trained models
 │   ├── sudokunet.py                 # CNN model architecture definition
@@ -160,10 +165,12 @@ Once the app is running, follow these steps:
 ### Dataset Generation
 
 Before training the model, you'll need a custom dataset of digit images. The `DigitDatasetGenerator` class generates 
-images of digits (1-9) in different styles and levels of distortion. These images are used to train the neural network 
-to recognize digits in Sudoku puzzles.
+images of digits (1-9) in different styles and levels of distortion. Alternatively you can use 
+`SudokuDigitImageExtractor` to prepare the more real-world based sudoku digits dataset. These images are used to train 
+the neural network to recognize digits in Sudoku puzzles.
 
-#### Steps to Generate a Custom Dataset
+
+#### Steps to Generate a Custom Synthetic Dataset
 
 1. **Configure the Dataset Generator**
    
@@ -183,9 +190,28 @@ to recognize digits in Sudoku puzzles.
    generator = DigitDatasetGenerator(
        num_samples=1000,
        clean_proportion=0.3,
-       output_dir="test_dataset"  # Choose between 'digit_dataset' for training or 'test_dataset' for evaluation
+       output_dir="digit_dataset"
    )
    generator.generate_images()
+
+3. **Collect digit images from `generate_model/digit_dataset` folder.**
+
+#### Steps to Generate a Real-World Sudoku Digit Dataset
+
+1. **Place sudoku images into `generate_model/sudoku_digit_image_extractor/sudoku_images` folder.**
+
+2. **Run Dataset Generation**
+   
+   After setting the parameters, instantiate the `SudokuDigitImageExtractor` and call `process_images()` to create the dataset.
+
+   ```python
+    input_folder = "sudoku_images"
+    output_folder = "extracted_digit_images"
+
+    extractor = SudokuDigitImageExtractor(input_folder, output_folder)
+    extractor.process_images()
+
+3. **Collect digit images from `generate_model/sudoku_digit_image_extractor/extracted_digit_images` folder and label them into correct subfolders (1 to 9)**
 
 ### Model Training
 
