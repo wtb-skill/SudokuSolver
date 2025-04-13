@@ -3,10 +3,10 @@ import cv2
 import numpy as np
 from werkzeug.datastructures import FileStorage
 
-from modules.sudoku_image.step_1_image_preprocessor import ImagePreprocessor
-from modules.sudoku_image.step_2_board_detector import BoardDetector
-from modules.sudoku_image.step_3_digit_extractor import DigitExtractor
-from modules.sudoku_image.step_4_digit_preprocessor import DigitPreprocessor
+from modules.sudoku_image_pipeline.step_1_image_preprocessor import ImagePreprocessor
+from modules.sudoku_image_pipeline.step_2_board_detector import BoardDetector
+from modules.sudoku_image_pipeline.step_3_digit_extractor import DigitExtractor
+from modules.sudoku_image_pipeline.step_4_digit_preprocessor import DigitPreprocessor
 from modules.types import ProcessedDigitGrid
 from modules.debug import ImageCollector
 

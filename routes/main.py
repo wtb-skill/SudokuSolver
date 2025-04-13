@@ -11,7 +11,7 @@ from modules.debug import ImageCollector
 from modules.board_display import SudokuBoardDisplay
 from modules.solving_algorithm.norvig_solver import NorvigSolver
 from modules.solving_algorithm.sudoku_converter import SudokuConverter
-from modules.sudoku_image.sudoku_pipeline import SudokuPipeline
+from modules.sudoku_image_pipeline.sudoku_pipeline import SudokuPipeline
 from modules.user_data_collector import UserDataCollector
 import pickle
 
@@ -79,7 +79,7 @@ def upload_file() -> str or Response:
 
             if not solved_grid:
                 # debug:
-                # image_collector.display_images_in_grid()
+                image_collector.display_images_in_grid()
                 # image_collector.save_images()
 
                 # Store the digits grid temporarily
