@@ -36,6 +36,7 @@ def home() -> str:
     image_collector.reset()
     return render_template('index.html')
 
+@main_bp.route('/upload', methods=['POST'])
 def upload_file() -> str or Response:
     """
     Handles the uploaded file, processes the Sudoku image, recognizes digits,
@@ -78,8 +79,8 @@ def upload_file() -> str or Response:
 
             if not solved_grid:
                 # debug:
-                # debug.display_images_in_grid()
-                # debug.save_images()
+                # image_collector.display_images_in_grid()
+                # image_collector.save_images()
 
                 # Store the digits grid temporarily
                 digit_images = image_collector.digit_cells
@@ -99,8 +100,8 @@ def upload_file() -> str or Response:
             sudoku_board_display.draw_solved_board(unsolved_board=unsolved_board, solved_board=solved_board)
 
             # debug:
-            # debug.display_images_in_grid()
-            # debug.save_images()
+            image_collector.display_images_in_grid()
+            # image_collector.save_images()
 
             # Render the solution page
             return render_template('solution.html')
