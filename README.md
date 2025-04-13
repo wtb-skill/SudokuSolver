@@ -1,56 +1,20 @@
 # Sudoku Solver
 
 A computer vision-based Sudoku solver that can automatically detect, interpret, and solve Sudoku puzzles from images. 
-This project combines convolutional neural networks (CNNs), image processing, and algorithmic problem-solving to extract 
+This project combines **convolutional neural networks (CNNs)**, **image processing**, and **algorithmic problem-solving** to extract 
 Sudoku grids from photos, recognize digits, and solve the puzzle efficiently. It also features an 
 interactive web interface for users to upload images and view results in real time.
 
-### Features
+## Features
 
-- **Sudoku Image Processing**  
-  Automatically detects, extracts, and corrects perspective distortion and noise in Sudoku grids using OpenCV. Robust to imperfect lighting, angles, and camera input.
-
-- **Digit Recognition with CNN**  
-  Classifies digits in the Sudoku grid using a custom-trained convolutional neural network.
-
-- **Norvig Solver Integration**  
-  Efficiently solves Sudoku puzzles using Peter Norvig’s constraint propagation and recursive backtracking algorithm.
-
-- **Interactive Web Interface**  
-  A user-friendly Flask-based frontend that allows users to upload Sudoku images and visualize the original, recognized, and solved grids side-by-side.
-
-- **Model Evaluation Suite**  
-  Includes tools for evaluating CNN performance with:
-  - Confusion matrix visualization  
-  - Per-class accuracy bar charts  
-  - ROC curve generation  
-  - Misclassified image display  
-  - Exportable metric summaries
-
-- **User Data Collection and Feedback Loop**  
-  Allows users to provide manual labels for misclassified digits, creating a dataset for future model retraining and iterative improvement.
-
-- **Modular and Extensible Architecture**  
-  Clear separation between image processing, digit recognition, solving logic, evaluation, and web presentation. Designed to support easy debugging, scaling, and unit testing.
-
-- **Synthetic Dataset Generator**  
-  Scripted pipeline for generating digit datasets using a variety of fonts and augmentations. Facilitates model training without requiring large labeled datasets.
-
-- **Model Training Pipeline**  
-  Includes utilities for training and evaluating CNN models (e.g., Sudokunet) with visualization and performance tracking.
-
-- **Session and Upload Management**  
-  Secure and isolated handling of uploaded images and session data, with automatic cleanup on restart to maintain a clean working environment.
-
-- **Image Debugging Visualizer**  
-  Step-by-step image visualization for each stage of the processing pipeline, aiding in error analysis and debugging.
-
-- **Deployment-Ready Design**  
-  Lightweight Flask app architecture, easily deployable locally or to cloud environments (e.g., Render, Heroku, or Docker-based platforms).
-
-- **Comprehensive Documentation and Code Comments**  
-  Well-documented codebase with detailed inline docstrings, descriptive naming conventions, and a clean project structure.
-
+- 📷 **Image Processing** – Detects and extracts Sudoku grids from real-world photos using OpenCV.
+- 🔢 **Digit Recognition (CNN)** – Recognizes digits using a custom-trained convolutional neural network.
+- 🧩 **Puzzle Solver** – Uses Peter Norvig’s constraint propagation and backtracking algorithm.
+- 🌐 **Web Interface** – Flask-based web UI for uploading, solving, and visualizing Sudoku puzzles.
+- 📈 **Model Evaluation Tools** – Confusion matrix, per-class accuracy, misclassified images, and more.
+- 📝 **User Feedback Loop** – Allows manual correction of misclassified digits to improve the model.
+- 🧱 **Modular Architecture** – Cleanly separated pipeline for processing, solving, evaluation, and UI.
+- 🔧 **Dataset & Model Tools** – Includes optional tools for generating synthetic and real-world digit datasets, plus CNN training utilities.
 
 ## Project Structure
 
@@ -65,16 +29,16 @@ interactive web interface for users to upload images and view results in real ti
 │   ├── digit_recognition.py         # CNN-based digit recognition from image patches
 │   ├── debug.py                     # Tools for image collection and debugging
 │   ├── user_data_collector.py       # Handles collection and validation of user-labeled data
-│   ├── sudoku_image/
+│   ├── sudoku_image_pipeline/
 │   │    ├── step_1_image_preprocessor.py   # Preprocesses raw image (grayscale, blur, thresholding)
 │   │    ├── step_2_board_detector.py       # Detects and warps the Sudoku board from the image
 │   │    ├── step_3_digit_extractor.py      # Extracts digit cells from the board
 │   │    ├── step_4_digit_preprocessor.py   # Normalizes digits for model prediction
 │   │    └── sudoku_pipeline.py             # Orchestrates full Sudoku image processing pipeline
 │   │
-│   ├── modules/solving_algorithm/
-│   ├── norvig_solver.py             # Norvig-style backtracking algorithm to solve Sudoku
-│   └── sudoku_converter.py          # Converts between board matrix and string/dictionary formats
+│   └── solving_algorithm/
+│       ├── norvig_solver.py             # Norvig-style backtracking algorithm to solve Sudoku
+│       └── sudoku_converter.py          # Converts between board matrix and string/dictionary formats
 │
 ├── generate_model/
 │   ├── digit_dataset/               # Generated synthetic digits for training
@@ -122,6 +86,7 @@ Start by installing the required Python dependencies. You can install them using
 ```
 pip install -r requirements.txt
 ```
+
 ### 2. Run the Application
 
 To start the Flask application, run the following command:
@@ -130,38 +95,28 @@ python app.py
 ```
 The app will launch and be accessible at:
 http://127.0.0.1:5000/
-### 3. Using the Interface
 
-Once the app is running, follow these steps:
+### 3. Upload & Solve Sudoku Puzzles
 
-    Upload a Sudoku Image
-    On the homepage, you can upload a photo of a Sudoku puzzle. For best results, ensure the image is well-lit, the Sudoku grid is centered, and the digits are large and clear.
+1. **Upload an Image** <br>
+    Upload a photo of a Sudoku grid — centered, well-lit, and clearly visible digits work best.
+2. **Automatic Processing** <br>
+    The app will:
+   - Detect and extract the Sudoku board
+   - Recognize digits using the CNN
+   - Solve the puzzle using Norvig’s algorithm
+3. **View Results** <br>
+You’ll see:
+   - The detected grid
+   - The recognized digits
+   - The solved puzzle (if solvable)
+4. **Handle Unsolvable or Misread Grids** <br>
+If a puzzle cannot be solved (e.g., due to digit recognition errors), you can:
+    - Manually label incorrect digits
+    - Help improve the model for future usage
+    - Optionally use this feedback to retrain the digit recognizer
 
-    Image Processing & Puzzle Recognition
-    After uploading the image, the app will automatically:
-
-        Detect the Sudoku grid: The app uses image processing techniques to find and extract the Sudoku grid.
-
-        Recognize the digits: A Convolutional Neural Network (CNN) will classify the digits in the grid, identifying each digit from the image.
-
-        Attempt to solve the puzzle: Using Peter Norvig’s efficient algorithm, the app will attempt to solve the Sudoku puzzle.
-
-    View Unsolved and Solved Grids
-    Once the image is processed and the puzzle is solved, the app will display:
-
-        The original, unsolved Sudoku grid (as recognized by the app).
-
-        The solved Sudoku grid, with the solution computed by the algorithm.
-
-    Handling Unsolvable Puzzles
-    If the app is unable to solve the puzzle (for example, due to poor image quality or unreadable digits), it will prompt you to manually label the misclassified digits.
-
-        Label Misclassified Digits: You will be asked to identify any incorrectly recognized digits and assign the correct values. This helps improve the model for future puzzle-solving tasks.
-
-        Once you’ve labeled the digits, the model will learn from your input, and you can use the labeled data to retrain the model, improving its performance over time.
-
-## 4. (Optional) Model Generation and Evaluation
-
+### ⚙️ Optional: Train Your Own Digit Recognizer ###
 ### Dataset Generation
 
 Before training the model, you'll need a custom dataset of digit images. The `DigitDatasetGenerator` class generates 
@@ -170,7 +125,7 @@ images of digits (1-9) in different styles and levels of distortion. Alternative
 the neural network to recognize digits in Sudoku puzzles.
 
 
-#### Steps to Generate a Custom Synthetic Dataset
+#### **Option 1**: Steps to Generate a Custom Synthetic Dataset
 
 1. **Configure the Dataset Generator**
    
@@ -196,7 +151,7 @@ the neural network to recognize digits in Sudoku puzzles.
 
 3. **Collect digit images from `generate_model/digit_dataset` folder.**
 
-#### Steps to Generate a Real-World Sudoku Digit Dataset
+#### **Option 2**: Steps to Generate a Real-World Sudoku Digit Dataset
 
 1. **Place sudoku images into `generate_model/sudoku_digit_image_extractor/sudoku_images` folder.**
 
@@ -245,6 +200,17 @@ Once your dataset is ready, you can train a Convolutional Neural Network (CNN) t
         batch_size=128  
     )    
     trainer.run()
+
+## 🙋 FAQ ##
+
+**Do I need to train a model to use the app?**<br>
+No! A pre-trained model is included and used by default.
+
+**What if the app misreads a digit?**<br>
+You can manually correct it using the feedback interface. These corrections can be saved and later used to improve the model.
+
+**Where do I find the extracted digit crops?**<br>
+They're saved under generate_model/sudoku_digit_image_extractor/extracted_digit_images.
 
 ## Authors
 
