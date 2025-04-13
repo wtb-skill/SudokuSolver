@@ -158,3 +158,4 @@ class ImageCollector:
         Clear all collected digit cells.
         """
         self.digit_cells.clear()
+        self.images.clear()
