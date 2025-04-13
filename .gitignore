@@ -167,3 +167,4 @@ generate_model/test_dataset
 generate_model/archive_fonts
 flask_session_data
 collected_data
+generate_model/evaluation_results
