@@ -201,6 +201,16 @@ Once your dataset is ready, you can train a Convolutional Neural Network (CNN) t
     )    
     trainer.run()
 
+## 🔌 API Route Map
+
+| Route | Method | Description |
+|-------|--------|-------------|
+| `/` | `GET` | Clears the session, resets the image collector, and renders the homepage (`index.html`). |
+| `/process-sudoku-image` | `POST` | Accepts uploaded Sudoku image, processes it, recognizes digits, solves it, and renders the solution page or error. |
+| `/debug-image/<step_name>` | `GET` | Serves a debug image for a specific step (used for debugging image processing pipeline). |
+| `/handle-collect-decision` | `POST` | Handles whether the user wants to label misclassified digits or return to homepage. |
+| `/collect-user-data` | `POST` | Accepts labeled digits from the user to improve future model training. |
+
 ## 🙋 FAQ ##
 
 **Do I need to train a model to use the app?**<br>
@@ -209,12 +219,13 @@ No! A pre-trained model is included and used by default.
 **What if the app misreads a digit?**<br>
 You can manually correct it using the feedback interface. These corrections can be saved and later used to improve the model.
 
-**Where do I find the extracted digit crops?**<br>
-They're saved under generate_model/sudoku_digit_image_extractor/extracted_digit_images.
+**Where do I find the saved data to improve the model?**<br>
+They're saved inside collected_data/ folder. Each image already labeled and model ready.
 
 ## Authors
 
     Adam Bałdyga
+    Marcin Kirpluk
 
 ## License
 

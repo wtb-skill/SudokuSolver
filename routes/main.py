@@ -36,8 +36,8 @@ def home() -> str:
     image_collector.reset()
     return render_template('index.html')
 
-@main_bp.route('/upload', methods=['POST'])
-def upload_file() -> str or Response:
+@main_bp.route('/process-sudoku-image', methods=['POST'])
+def process_sudoku_image() -> str or Response:
     """
     Handles the uploaded file, processes the Sudoku image, recognizes digits,
     solves the Sudoku, and displays the solution or an error message.
@@ -63,10 +63,10 @@ def upload_file() -> str or Response:
 
             # Step 2: Categorize digit images into actual numbers
             recognizer = SudokuDigitRecognizer(model_path="models/sudoku_digit_recognizer.keras")
-            unsolved_board = recognizer.convert_cells_to_digits(preprocessed_digit_images)
+            unsolved_board = recognizer.convert_cells_to_digits(extracted_cells=preprocessed_digit_images)
 
             # Create an image of the unsolved board
-            sudoku_board_display = SudokuBoardDisplay(image_collector)
+            sudoku_board_display = SudokuBoardDisplay(image_collector=image_collector)
             sudoku_board_display.draw_unsolved_board(board=unsolved_board)
 
             # Convert the 2D digit board to a Sudoku grid string
@@ -75,11 +75,11 @@ def upload_file() -> str or Response:
 
             # Step 3: Solve the Sudoku puzzle
             solver = NorvigSolver()
-            solved_grid = solver.solve(sudoku_grid)
+            solved_grid = solver.solve(grid=sudoku_grid)
 
             if not solved_grid:
                 # debug:
-                image_collector.display_images_in_grid()
+                # image_collector.display_images_in_grid()
                 # image_collector.save_images()
 
                 # Store the digits grid temporarily
@@ -94,13 +94,13 @@ def upload_file() -> str or Response:
                 return render_template('no_solution.html')
 
             # Convert the solved Sudoku string back to a 2D digit board
-            solved_board = converter.dict_to_board(solved_grid)
+            solved_board = converter.dict_to_board(sudoku_dict=solved_grid)
 
             # Step 4: Create an image of the solved board
             sudoku_board_display.draw_solved_board(unsolved_board=unsolved_board, solved_board=solved_board)
 
             # debug:
-            image_collector.display_images_in_grid()
+            # image_collector.display_images_in_grid()
             # image_collector.save_images()
 
             # Render the solution page
