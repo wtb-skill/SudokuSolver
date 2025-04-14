@@ -131,14 +131,14 @@
     <!-- Sudoku Grid Form -->
     <div class="grid">
       <h2>Sudoku Grid</h2>
-      <form action="/collect-user-data" method="POST">
+      <form action="/correct-and-solve" method="POST">
         <table>
           {% for row in sudoku_grid %}
             <tr>
               {% for cell in row %}
                 <td>
                   {% if cell == 0 %}
-                    <input name="cell" value="{{ cell if cell != 0 else '' }}" maxlength="1" disabled />
+                    <input name="cell" value="" maxlength="1" readonly />
                   {% else %}
                     <input name="cell" value="{{ cell }}" maxlength="1" />
                   {% endif %}
@@ -147,7 +147,7 @@
             </tr>
           {% endfor %}
         </table>
-        <button type="submit">Save Collected Data</button>
+        <button type="submit">Save Collected Data And Display Solution</button>
       </form>
     </div>
   </div>

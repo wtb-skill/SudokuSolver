@@ -14,6 +14,7 @@ from modules.solving_algorithm.sudoku_converter import SudokuConverter
 from modules.sudoku_image_pipeline.sudoku_pipeline import SudokuPipeline
 from modules.user_data_collector import UserDataCollector
 import pickle
+import numpy as np
 
 # Initialize Blueprint
 main_bp = Blueprint('main', __name__)
@@ -160,32 +161,86 @@ def handle_collect_decision() -> str or Response:
 
     return redirect('/')
 
-@main_bp.route('/collect-user-data', methods=['POST'])
-def collect_user_data() -> str or Response:
+@main_bp.route('/correct-and-solve', methods=['POST'])
+def correct_and_solve() -> str or Response:
     """
-    Collects user-provided labels for the Sudoku puzzle and saves the labeled data.
+    Collects user-provided labels for the Sudoku puzzle, saves the labeled data,
+    and attempts to solve the puzzle using the corrected input.
 
     Returns:
-        str: A message indicating the result of the operation (success or failure).
+        str: Redirect to solution page or error message.
     """
     try:
-        # Step 1: Get labels and convert them to integers
+        # Step 1: Get labels and convert to integers
         labels = request.form.getlist('cell')
-        labels = [int(label.strip()) for label in labels if label.strip().isdigit()]  # Convert to integers
+        labels_81 = [int(label.strip()) if label.strip().isdigit() else 0 for label in labels]
+        labels_no_zeros = [num for num in labels_81 if num != 0]
 
         # Step 2: Load and validate digit images
         collector = UserDataCollector()
         digit_images = collector.load_digit_images_from_session(session)
-        collector.validate_labels(digit_images, labels)
+        collector.validate_labels(digit_images, labels_no_zeros)
 
-        # Step 3: Save data
-        collector.save_labeled_data(digit_images, labels)
+        # Step 3: Save labeled data
+        collector.save_labeled_data(digit_images, labels_no_zeros)
 
-        # Step 4: Cleanup
+        # Step 4: Build corrected board from labels (9x9)
+        corrected_board = np.array([labels_81[i:i + 9] for i in range(0, len(labels), 9)])
+
+        # Step 5: Convert to solver grid format
+        converter = SudokuConverter()
+        sudoku_grid = converter.board_to_string(corrected_board)
+
+        # Step 6: Solve the puzzle
+        solver = NorvigSolver()
+        solved_grid = solver.solve(grid=sudoku_grid)
+
+        if not solved_grid:
+            return "Sudoku still cannot be solved with corrected input.", 400
+
+        # Step 7: Display solution
+        display = SudokuBoardDisplay(image_collector=image_collector)
+        solved_board = converter.dict_to_board(solved_grid)
+        display.draw_unsolved_board(corrected_board)
+        display.draw_solved_board(unsolved_board=corrected_board, solved_board=solved_board)
+
+        # Step 8: Cleanup
         session.clear()
-        return redirect('/')
+
+        return render_template('solution.html')
 
     except ValueError as ve:
         return str(ve), 400
     except Exception as e:
         return f"Unexpected error: {str(e)}", 500
+
+
+# @main_bp.route('/collect-user-data', methods=['POST'])
+# def collect_user_data() -> str or Response:
+#     """
+#     Collects user-provided labels for the Sudoku puzzle and saves the labeled data.
+#
+#     Returns:
+#         str: A message indicating the result of the operation (success or failure).
+#     """
+#     try:
+#         # Step 1: Get labels and convert them to integers
+#         labels = request.form.getlist('cell')
+#         labels = [int(label.strip()) for label in labels if label.strip().isdigit()]  # Convert to integers
+#
+#         # Step 2: Load and validate digit images
+#         collector = UserDataCollector()
+#         digit_images = collector.load_digit_images_from_session(session)
+#         collector.validate_labels(digit_images, labels)
+#
+#         # Step 3: Save data
+#         collector.save_labeled_data(digit_images, labels)
+#
+#         # Step 4: Cleanup
+#         session.clear()
+#         return redirect('/')
+#
+#     except ValueError as ve:
+#         return str(ve), 400
+#     except Exception as e:
+#         return f"Unexpected error: {str(e)}", 500
