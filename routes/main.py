@@ -19,7 +19,7 @@ import pickle
 main_bp = Blueprint('main', __name__)
 
 # Ensure the uploads folder exists
-os.makedirs('uploads', exist_ok=True)
+# os.makedirs('uploads', exist_ok=True) # old version
 
 # Initialize ImageCollector instance
 image_collector = ImageCollector()
@@ -109,19 +109,19 @@ def upload_file() -> str or Response:
         except Exception as e:
             return f"Error processing image: {str(e)}"
 
-
-@main_bp.route('/uploads/<filename>')
-def uploaded_file(filename: str) -> Response:
-    """
-    Serves an uploaded file from the 'uploads' directory.
-
-    Parameters:
-        filename (str): The name of the file to serve.
-
-    Returns:
-        Response: The file served from the 'uploads' directory.
-    """
-    return send_from_directory('uploads', filename)
+# old version
+# @main_bp.route('/uploads/<filename>')
+# def uploaded_file(filename: str) -> Response:
+#     """
+#     Serves an uploaded file from the 'uploads' directory.
+#
+#     Parameters:
+#         filename (str): The name of the file to serve.
+#
+#     Returns:
+#         Response: The file served from the 'uploads' directory.
+#     """
+#     return send_from_directory('uploads', filename)
 
 @main_bp.route('/debug-image/<step_name>')
 def get_debug_image(step_name) -> Response:
@@ -140,7 +140,6 @@ def get_debug_image(step_name) -> Response:
         abort(404)  # Return 404 if the image is not found
 
     return send_file(image_bytes, mimetype='image/jpeg')
-
 
 @main_bp.route('/handle-collect-decision', methods=['POST'])
 def handle_collect_decision() -> str or Response:

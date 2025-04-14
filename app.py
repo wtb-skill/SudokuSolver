@@ -12,7 +12,7 @@ os.makedirs(session_folder, exist_ok=True)
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'  # Set a secret key for the session
-app.config['UPLOAD_FOLDER'] = 'uploads/'
+# app.config['UPLOAD_FOLDER'] = 'uploads/'  # old version
 
 # Flask-Session config
 app.config['SESSION_TYPE'] = 'filesystem'  # Store session data on disk

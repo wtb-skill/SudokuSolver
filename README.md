@@ -70,7 +70,7 @@ interactive web interface for users to upload images and view results in real ti
 │
 ├── debug_images/                    # Stores debug images during development
 ├── collected_data/                  # Stores user-labeled digit samples
-├── uploads/                         # Temporary storage for uploaded Sudoku images
+├── uploads/                         # Temporary storage for uploaded Sudoku images  # old version
 ├── flask_session_data/              # Stores session files across requests
 │
 ├── requirements.txt                 # Python dependency list
