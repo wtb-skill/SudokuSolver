@@ -15,12 +15,13 @@ from modules.sudoku_image_pipeline.sudoku_pipeline import SudokuPipeline
 from modules.user_data_collector import UserDataCollector
 import pickle
 import numpy as np
+import shutil
 
 # Initialize Blueprint
 main_bp = Blueprint('main', __name__)
 
 # Ensure the uploads folder exists
-# os.makedirs('uploads', exist_ok=True) # old version
+os.makedirs('uploads', exist_ok=True) # old version
 
 # Initialize ImageCollector instance
 image_collector = ImageCollector()
@@ -80,7 +81,7 @@ def process_sudoku_image() -> str or Response:
 
             if not solved_grid:
                 # debug:
-                # image_collector.display_images_in_grid()
+                image_collector.display_images_in_grid()
                 # image_collector.save_images()
 
                 # Store the digits grid temporarily
@@ -101,7 +102,7 @@ def process_sudoku_image() -> str or Response:
             sudoku_board_display.draw_solved_board(unsolved_board=unsolved_board, solved_board=solved_board)
 
             # debug:
-            # image_collector.display_images_in_grid()
+            image_collector.display_images_in_grid()
             # image_collector.save_images()
 
             # Render the solution page
@@ -110,19 +111,18 @@ def process_sudoku_image() -> str or Response:
         except Exception as e:
             return f"Error processing image: {str(e)}"
 
-# old version
-# @main_bp.route('/uploads/<filename>')
-# def uploaded_file(filename: str) -> Response:
-#     """
-#     Serves an uploaded file from the 'uploads' directory.
-#
-#     Parameters:
-#         filename (str): The name of the file to serve.
-#
-#     Returns:
-#         Response: The file served from the 'uploads' directory.
-#     """
-#     return send_from_directory('uploads', filename)
+@main_bp.route('/uploads/<filename>')
+def uploaded_file(filename: str) -> Response:
+    """
+    Serves an uploaded file from the 'uploads' directory.
+
+    Parameters:
+        filename (str): The name of the file to serve.
+
+    Returns:
+        Response: The file served from the 'uploads' directory.
+    """
+    return send_from_directory('uploads', filename)
 
 @main_bp.route('/debug-image/<step_name>')
 def get_debug_image(step_name) -> Response:
@@ -200,8 +200,8 @@ def correct_and_solve() -> str or Response:
 
         # Step 7: Display solution
         display = SudokuBoardDisplay(image_collector=image_collector)
-        solved_board = converter.dict_to_board(solved_grid)
-        display.draw_unsolved_board(corrected_board)
+        solved_board = converter.dict_to_board(sudoku_dict=solved_grid)
+        display.draw_unsolved_board(board=corrected_board)
         display.draw_solved_board(unsolved_board=corrected_board, solved_board=solved_board)
 
         # Step 8: Cleanup
@@ -214,33 +214,62 @@ def correct_and_solve() -> str or Response:
     except Exception as e:
         return f"Unexpected error: {str(e)}", 500
 
+@main_bp.route('/process-all-sudoku-images', methods=['GET'])
+def process_all_sudoku_images():
+    """
+    Automatically processes all Sudoku images in the 'uploads/' folder,
+    attempting to solve each one and move the result to either 'solved/' or 'unsolved/' folder.
+    """
 
-# @main_bp.route('/collect-user-data', methods=['POST'])
-# def collect_user_data() -> str or Response:
-#     """
-#     Collects user-provided labels for the Sudoku puzzle and saves the labeled data.
-#
-#     Returns:
-#         str: A message indicating the result of the operation (success or failure).
-#     """
-#     try:
-#         # Step 1: Get labels and convert them to integers
-#         labels = request.form.getlist('cell')
-#         labels = [int(label.strip()) for label in labels if label.strip().isdigit()]  # Convert to integers
-#
-#         # Step 2: Load and validate digit images
-#         collector = UserDataCollector()
-#         digit_images = collector.load_digit_images_from_session(session)
-#         collector.validate_labels(digit_images, labels)
-#
-#         # Step 3: Save data
-#         collector.save_labeled_data(digit_images, labels)
-#
-#         # Step 4: Cleanup
-#         session.clear()
-#         return redirect('/')
-#
-#     except ValueError as ve:
-#         return str(ve), 400
-#     except Exception as e:
-#         return f"Unexpected error: {str(e)}", 500
+    upload_dir = 'uploads'
+    solved_dir = 'uploads/solved'
+    unsolved_dir = 'uploads/unsolved'
+
+    # Create the necessary directories if they don't exist
+    os.makedirs(solved_dir, exist_ok=True)
+    os.makedirs(unsolved_dir, exist_ok=True)
+
+    # List all files in the 'uploads' folder
+    files = [f for f in os.listdir(upload_dir) if f.endswith(('.png', '.jpg', '.jpeg'))]
+
+    # Process each image file
+    for file_name in files:
+        try:
+            file_path = os.path.join(upload_dir, file_name)
+
+            # Step 1: Process the image and extract the 2D list of digit images
+            sudoku_pipeline = SudokuPipeline(image_file=file_path, image_collector=image_collector)
+            preprocessed_digit_images = sudoku_pipeline.process_sudoku_image()
+
+            # Step 2: Categorize digit images into actual numbers
+            recognizer = SudokuDigitRecognizer(model_path="models/sudoku_digit_recognizer.keras")
+            unsolved_board = recognizer.convert_cells_to_digits(extracted_cells=preprocessed_digit_images)
+
+            # Convert the 2D digit board to a Sudoku grid string
+            converter = SudokuConverter()
+            sudoku_grid = converter.board_to_string(digit_board=unsolved_board)
+
+            # Step 3: Solve the Sudoku puzzle
+            solver = NorvigSolver()
+            solved_grid = solver.solve(grid=sudoku_grid)
+
+            if solved_grid:
+                # If solved, move to the 'solved' folder
+                solved_board = converter.dict_to_board(sudoku_dict=solved_grid)
+                sudoku_board_display = SudokuBoardDisplay(image_collector=image_collector)
+                sudoku_board_display.draw_solved_board(unsolved_board=unsolved_board, solved_board=solved_board)
+
+                # Move the file to the 'solved' folder
+                solved_file_path = os.path.join(solved_dir, file_name)
+                shutil.move(file_path, solved_file_path)
+
+            else:
+                # If not solved, move to the 'unsolved' folder
+                unsolved_file_path = os.path.join(unsolved_dir, file_name)
+                shutil.move(file_path, unsolved_file_path)
+
+        except Exception as e:
+            print(f"Error processing {file_name}: {str(e)}")
+
+    # Return a message when all images are processed
+    return "All images have been processed!"

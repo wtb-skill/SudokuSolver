@@ -17,21 +17,30 @@ class SudokuPipeline:
     board detection, digit extraction, and digit preprocessing for model input.
     """
 
-    def __init__(self, image_file: FileStorage, image_collector: ImageCollector):
+    def __init__(self, image_file, image_collector: ImageCollector):
         """
         Initializes the pipeline by reading and decoding the uploaded image file.
 
         Args:
-            image_file (BinaryIO): A file-like object containing the uploaded image.
+            image_file (str or FileStorage): Path to the uploaded image file or a FileStorage object.
             image_collector (ImageCollector): A debug image collector to store intermediate images.
         """
-        file_bytes = np.frombuffer(image_file.read(), np.uint8)
-        image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-        if image is None:
-            raise ValueError("Image could not be loaded. Check the file content.")
-
         self.image_collector: ImageCollector = image_collector
-        self.image: np.ndarray = image
+
+        # Check if image_file is a path (string) or FileStorage object
+        if isinstance(image_file, str):
+            # If it's a file path, load the image using OpenCV
+            self.image = cv2.imread(image_file)
+            if self.image is None:
+                raise ValueError(f"Image could not be loaded from path: {image_file}. Check the file content.")
+        elif isinstance(image_file, FileStorage):
+            # If it's a FileStorage object, read it into a numpy array
+            file_bytes = np.frombuffer(image_file.read(), np.uint8)
+            self.image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+            if self.image is None:
+                raise ValueError("Image could not be loaded. Check the file content.")
+        else:
+            raise ValueError("image_file must be a string (path) or a FileStorage object.")
 
     def process_sudoku_image(self) -> ProcessedDigitGrid:
         """

@@ -111,8 +111,9 @@ You’ll see:
    - The recognized digits
    - The solved puzzle (if solvable)
 4. **Handle Unsolvable or Misread Grids** <br>
-If a puzzle cannot be solved (e.g., due to digit recognition errors), you can:
+If a puzzle cannot be solved due to digit recognition errors, you can:
     - Manually label incorrect digits
+    - Automatically solve the puzzle using the corrected input
     - Help improve the model for future usage
     - Optionally use this feedback to retrain the digit recognizer
 
@@ -209,7 +210,7 @@ Once your dataset is ready, you can train a Convolutional Neural Network (CNN) t
 | `/process-sudoku-image` | `POST` | Accepts uploaded Sudoku image, processes it, recognizes digits, solves it, and renders the solution page or error. |
 | `/debug-image/<step_name>` | `GET` | Serves a debug image for a specific step (used for debugging image processing pipeline). |
 | `/handle-collect-decision` | `POST` | Handles whether the user wants to label misclassified digits or return to homepage. |
-| `/collect-user-data` | `POST` | Accepts labeled digits from the user to improve future model training. |
+| `/correct-and-solve` | `POST` | Solves Sudoku with user input and stores corrected data for training. |
 
 ## 🙋 FAQ ##
 
