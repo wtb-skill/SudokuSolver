@@ -3,6 +3,7 @@ from sudokunet import SudokuNet
 from model_evaluator import ModelEvaluator
 from keras.api.optimizers import Adam
 from keras.api.utils import to_categorical
+from keras.api.datasets import mnist
 import matplotlib.pyplot as plt
 import numpy as np
 import cv2
@@ -78,6 +79,46 @@ class SudokunetTrainer:
         self.trainLabels, self.testLabels = labels[:split], labels[split:]
         print(f"[INFO] Dataset split into {len(self.trainData)} training and {len(self.testData)} testing samples.")
 
+    def load_mnist_dataset(self):
+        """
+        Loads and preprocesses the MNIST dataset (digits 1 through 9 only),
+        structured to behave like the custom dataset loading logic.
+        """
+        print("[INFO] Loading MNIST dataset...")
+
+        (data, labels), _ = mnist.load_data()
+
+        # Filter out digit '0' to match your custom dataset (1–9 only)
+        print("[INFO] Filtering digits 1–9 only...")
+        mask = labels != 0
+        data = data[mask]
+        labels = labels[mask] - 1  # Convert labels from 1–9 to 0–8
+
+        # Normalize and reshape
+        data = data.astype("float32") / 255.0
+        data = np.expand_dims(data, axis=-1)
+
+        # Resize if needed
+        if self.image_size != 28:
+            print(f"[INFO] Resizing images to {self.image_size}x{self.image_size}...")
+            data_resized = np.array([cv2.resize(img, (self.image_size, self.image_size)) for img in data])
+            data = np.expand_dims(data_resized, axis=-1)
+
+        # One-hot encode labels
+        labels = to_categorical(labels, num_classes=9)
+
+        print(f"[INFO] Total dataset size: {len(data)} images")
+
+        # Shuffle and split just like in load_dataset()
+        indices = np.arange(len(data))
+        np.random.shuffle(indices)
+        data, labels = data[indices], labels[indices]
+
+        split = int(0.8 * len(data))
+        self.trainData, self.testData = data[:split], data[split:]
+        self.trainLabels, self.testLabels = labels[:split], labels[split:]
+        print(f"[INFO] Dataset split into {len(self.trainData)} training and {len(self.testData)} testing samples.")
+
     def compile_model(self):
         """
         Compiles the SudokuNet model.
@@ -89,11 +130,11 @@ class SudokunetTrainer:
         )
         self.model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
 
-
     def save_model(self):
         """
         Saves the trained model to disk.
         """
+        os.makedirs(os.path.dirname(self.model_output_path), exist_ok=True)
         print(f"[INFO] Saving model to {self.model_output_path}...")
         self.model.save(self.model_output_path)
 
@@ -154,9 +195,10 @@ class SudokunetTrainer:
         """
         Runs the complete training pipeline.
         """
-        self.load_dataset()
+        self.load_mnist_dataset() # load_dataset or load_mnist_dataset
         self.compile_model()
         self.train()
+        self.save_model()
 
         # Use ModelEvaluator for evaluation during training
         evaluator = ModelEvaluator(
@@ -167,8 +209,6 @@ class SudokunetTrainer:
             class_names=[str(i) for i in range(1, 10)]
         )
         evaluator.run()
-
-        self.save_model()
 
 
 if __name__ == "__main__":
