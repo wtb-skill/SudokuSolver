@@ -16,12 +16,13 @@ from modules.user_data_collector import UserDataCollector
 import pickle
 import numpy as np
 import shutil
+import json
 
 # Initialize Blueprint
 main_bp = Blueprint('main', __name__)
 
 # Ensure the uploads folder exists
-os.makedirs('uploads', exist_ok=True) # old version
+os.makedirs('uploads', exist_ok=True)
 
 # Initialize ImageCollector instance
 image_collector = ImageCollector()
@@ -82,7 +83,7 @@ def process_sudoku_image() -> str or Response:
             if not solved_grid:
                 # debug:
                 image_collector.display_images_in_grid()
-                # image_collector.save_images()
+                image_collector.save_images()
 
                 # Store the digits grid temporarily
                 digit_images = image_collector.digit_cells
@@ -92,7 +93,10 @@ def process_sudoku_image() -> str or Response:
                 # Store the unsolved board in the session
                 session['unsolved_board'] = unsolved_board.tolist()  # Convert to list to store in session
 
-                #return "Sudoku puzzle could not be solved."
+                # Store the filename in the session
+                if hasattr(file, 'filename'):
+                    session['filename'] = file.filename
+
                 return render_template('no_solution.html')
 
             # Convert the solved Sudoku string back to a 2D digit board
@@ -187,6 +191,20 @@ def correct_and_solve() -> str or Response:
         # Step 4: Build corrected board from labels (9x9)
         corrected_board = np.array([labels_81[i:i + 9] for i in range(0, len(labels), 9)])
 
+        # Step 4.5: Save corrected board to test.json ---
+        filename = session.get('filename')
+        if filename:
+            test_data = {}
+            if os.path.exists('test.json'):
+                with open('test.json', 'r') as json_file:
+                    test_data = json.load(json_file)
+
+            if filename not in test_data:
+                test_data[filename] = corrected_board.tolist()  # <-- save as plain list
+
+                with open('test.json', 'w') as json_file:
+                    json.dump(test_data, json_file, indent=4)
+
         # Step 5: Convert to solver grid format
         converter = SudokuConverter()
         sudoku_grid = converter.board_to_string(corrected_board)
@@ -273,3 +291,52 @@ def process_all_sudoku_images():
 
     # Return a message when all images are processed
     return "All images have been processed!"
+
+@main_bp.route('/process-test-dataset', methods=['GET'])
+def process_test_dataset():
+    """
+    Processes all new Sudoku images in 'uploads/clean/', extracts the unsolved board for each,
+    and saves the results in 'test.json' with format {filename: unsolved_board}.
+    """
+
+    import os
+    import json
+
+    clean_dir = 'uploads/clean'
+    os.makedirs(clean_dir, exist_ok=True)
+
+    # Load existing data if test.json exists
+    test_data = {}
+    if os.path.exists('test.json'):
+        with open('test.json', 'r') as json_file:
+            test_data = json.load(json_file)
+
+    files = [f for f in os.listdir(clean_dir) if f.endswith(('.png', '.jpg', '.jpeg'))]
+
+    for file_name in files:
+        if file_name in test_data:
+            # Skip files that are already processed
+            continue
+
+        try:
+            file_path = os.path.join(clean_dir, file_name)
+
+            # Step 1: Process the image and extract the 2D list of digit images
+            sudoku_pipeline = SudokuPipeline(image_file=file_path, image_collector=image_collector)
+            preprocessed_digit_images = sudoku_pipeline.process_sudoku_image()
+
+            # Step 2: Categorize digit images into actual numbers
+            recognizer = SudokuDigitRecognizer(model_path="models/sudoku_digit_recognizer.keras")
+            unsolved_board = recognizer.convert_cells_to_digits(extracted_cells=preprocessed_digit_images)
+
+            # Store the board as a list of lists (for JSON compatibility)
+            test_data[file_name] = unsolved_board.tolist()
+
+        except Exception as e:
+            print(f"Error processing {file_name}: {str(e)}")
+
+    # Save updated test_data to test.json
+    with open('test.json', 'w') as json_file:
+        json.dump(test_data, json_file, indent=4)
+
+    return "Test dataset processed and saved to test.json!"
