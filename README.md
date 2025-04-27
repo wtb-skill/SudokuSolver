@@ -204,13 +204,14 @@ Once your dataset is ready, you can train a Convolutional Neural Network (CNN) t
 
 ## 🔌 API Route Map
 
-| Route | Method | Description |
-|-------|--------|-------------|
-| `/` | `GET` | Clears the session, resets the image collector, and renders the homepage (`index.html`). |
+| Route | Method | Description                                                                                                        |
+|-------|--------|--------------------------------------------------------------------------------------------------------------------|
+| `/` | `GET` | Clears the session, resets the image collector, and renders the homepage (`index.html`).                           |
 | `/process-sudoku-image` | `POST` | Accepts uploaded Sudoku image, processes it, recognizes digits, solves it, and renders the solution page or error. |
-| `/debug-image/<step_name>` | `GET` | Serves a debug image for a specific step (used for debugging image processing pipeline). |
-| `/handle-collect-decision` | `POST` | Handles whether the user wants to label misclassified digits or return to homepage. |
-| `/correct-and-solve` | `POST` | Solves Sudoku with user input and stores corrected data for training. |
+| `/debug-image/<step_name>` | `GET` | Serves a debug image for a specific step (used for debugging image processing pipeline).                           |
+| `/handle-collect-decision` | `POST` | Handles whether the user wants to label misclassified digits or return to homepage.                                |
+| `/correct-and-solve` | `POST` | Solves Sudoku with user input and stores corrected data for training.                                              |
+| `/process-test-dataset` | `GET` | Extracts the unsolved boards from each image as numpy array.                                                       |
 
 ## 🙋 FAQ ##
 
@@ -226,7 +227,6 @@ They're saved inside collected_data/ folder. Each image already labeled and mode
 ## Authors
 
     Adam Bałdyga
-    Marcin Kirpluk
 
 ## License
 
