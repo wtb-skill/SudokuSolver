@@ -53,6 +53,12 @@ class SudokuPipeline:
         preprocessor = ImagePreprocessor(self.image, self.image_collector)
         thresholded = preprocessor.preprocess()
 
+        # print("[INFO] Denoising the image using FFDNet...")
+        # denoiser = FFDNetDenoiser()
+        # thresholded_denoised = denoiser.denoise(thresholded, noise_sigma=100.0)
+        # self.image_collector.add_image("thresholded_denoised", thresholded_denoised)
+        # self.image_collector.save_images()
+
         print("[INFO] Detecting Sudoku board...")
         detector = BoardDetector(preprocessor.get_original(), thresholded, self.image_collector)
         warped = detector.detect()

@@ -1,4 +1,5 @@
 # modules/sudoku_image/step_2_board_detector.py
+
 import cv2
 import imutils
 import numpy as np
@@ -6,47 +7,53 @@ from imutils.perspective import four_point_transform
 from typing import Optional
 from modules.debug import ImageCollector
 
+
 class BoardDetector:
-    """
-    Detects the Sudoku board in an image, including identifying contours, detecting the Sudoku grid,
-    and warping the board to a top-down perspective.
-
-    Attributes:
-        original_image (np.ndarray): The original input image (BGR).
-        thresholded (np.ndarray): The thresholded (binary) image used for contour detection.
-        warped (Optional[np.ndarray]): The warped top-down perspective of the Sudoku board (optional).
-        image_collector (ImageCollector): An instance of ImageCollector for storing debug images.
-    """
-
     def __init__(self, original_image: np.ndarray, thresholded: np.ndarray, image_collector: ImageCollector):
-        """
-        Initialize the BoardDetector with the original image, thresholded image, and image collector.
-
-        Args:
-            original_image (np.ndarray): The input BGR image of the Sudoku puzzle.
-            thresholded (np.ndarray): The thresholded (binary) image used for contour detection.
-            image_collector (ImageCollector): The image collector instance used to store debug images.
-        """
-        self.original_image: np.ndarray = original_image
-        self.thresholded: np.ndarray = thresholded
-        self.image_collector: ImageCollector = image_collector
+        self.original_image = original_image
+        self.thresholded = thresholded
+        self.image_collector = image_collector
         self.warped: Optional[np.ndarray] = None
 
     def detect(self) -> np.ndarray:
-        """
-        Detect the Sudoku board from the thresholded image by identifying contours,
-        sorting and filtering them based on size, and then applying a perspective
-        transform to obtain a top-down view of the board.
+        try:
+            corners = self._detect_contour_corners()
+            self.warped = self.warp_board(corners, label="Warped_Sudoku_Board")
+        except Exception as e:
+            print(f"[Primary Detection Failed] {e}")
+            print("[Falling back to grid-based detection method...]")
+            corners = self.detect_fallback()
+            self.warped = self.warp_board(corners, label="Fallback_Warped_Sudoku_Board")
+        return self.warped
 
-        Returns:
-            np.ndarray: The warped top-down perspective of the Sudoku board.
-        """
+    def warp_board(self, board_corners: np.ndarray, label: str = "Warped_Sudoku_Board") -> np.ndarray:
+        gray = cv2.cvtColor(self.original_image, cv2.COLOR_BGR2GRAY)
+        warped = four_point_transform(gray, board_corners)
+        self.image_collector.add_image(label, warped)
+        return warped
+
+    # def auto_canny(image: np.ndarray, sigma: float = 0.33) -> np.ndarray:
+    #     # Compute the median of the pixel intensities
+    #     v = np.median(image)
+    #
+    #     # Set lower and upper thresholds based on sigma
+    #     lower = int(max(0, (1.0 - sigma) * v))
+    #     upper = int(min(255, (1.0 + sigma) * v))
+    #
+    #     # Apply Canny edge detection with auto-calculated thresholds
+    #     edged = cv2.Canny(image, lower, upper)
+    #     return edged
+
+    def _detect_contour_corners(self) -> np.ndarray:
         contours = cv2.findContours(self.thresholded.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        # edges = BoardDetector.auto_canny(self.thresholded)
+        # contours = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
         contours = imutils.grab_contours(contours)
         contours = sorted(contours, key=cv2.contourArea, reverse=True)
 
         height, width = self.original_image.shape[:2]
-        min_area = 0.2 * height * width
+        min_area = 0.25 * height * width
         largest_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > min_area]
 
         if not largest_contours:
@@ -59,17 +66,43 @@ class BoardDetector:
         if len(approx) != 4:
             raise Exception("Detected contour is not quadrilateral.")
 
-        # Drawing the detected contour on the original image for visualization
         outline_img = self.original_image.copy()
         cv2.drawContours(outline_img, [approx], -1, (0, 255, 0), 2)
         self.image_collector.add_image("Detected_Sudoku_Outline", outline_img)
 
-        # Perform the perspective transformation
-        warped = four_point_transform(cv2.cvtColor(self.original_image, cv2.COLOR_BGR2GRAY), approx.reshape(4, 2))
-        self.warped = warped
+        return approx.reshape(4, 2).astype(np.float32)
 
-        # Storing the warped board image
-        self.image_collector.add_image("Warped_Sudoku_Board", self.warped)
+    def detect_fallback(self) -> np.ndarray:
+        debug_img = self.original_image.copy()
+        edges = cv2.Canny(self.thresholded, 50, 150, apertureSize=3)
+        lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=100, minLineLength=100, maxLineGap=10)
+        if lines is None:
+            raise Exception("Fallback failed: No lines detected.")
 
-        return self.warped
+        points = []
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            cv2.line(debug_img, (x1, y1), (x2, y2), (255, 0, 0), 1)
+            points.extend([(x1, y1), (x2, y2)])
 
+        self.image_collector.add_image("Fallback_Lines", debug_img)
+
+        top_left = min(points, key=lambda p: p[0] + p[1])
+        top_right = max(points, key=lambda p: p[0] - p[1])
+        bottom_left = min(points, key=lambda p: p[0] - p[1])
+        bottom_right = max(points, key=lambda p: p[0] + p[1])
+
+        fallback_corners = np.array([
+            top_left,
+            top_right,
+            bottom_right,
+            bottom_left
+        ], dtype=np.float32)
+
+        corner_debug = debug_img.copy()
+        for idx, pt in enumerate(fallback_corners):
+            cv2.circle(corner_debug, tuple(pt.astype(int)), 6, (0, 0, 255), -1)
+            cv2.putText(corner_debug, f"P{idx}", tuple(pt.astype(int) + 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+
+        self.image_collector.add_image("Fallback_Corners", corner_debug)
+        return fallback_corners

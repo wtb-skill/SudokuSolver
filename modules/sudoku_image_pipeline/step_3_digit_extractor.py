@@ -41,11 +41,46 @@ class DigitExtractor:
         rows = np.vsplit(self.board, grid_size)
         return [np.hsplit(row, grid_size) for row in rows]
 
+    # @staticmethod
+    # def extract_digit_image_from_cell(cell: np.ndarray) -> DigitImage:
+    #     """
+    #     Extracts a digit image from a given Sudoku cell by thresholding, clearing the borders,
+    #     finding contours, and isolating the digit.
+    #
+    #     Args:
+    #         cell (np.ndarray): The image of a single Sudoku cell.
+    #
+    #     Returns:
+    #         DigitImage: The extracted digit as a binary image, or None if no digit is found.
+    #     """
+    #     thresh = cv2.threshold(cell, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
+    #     cleared = clear_border(thresh)
+    #
+    #     contours = cv2.findContours(cleared.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    #     contours = imutils.grab_contours(contours)
+    #
+    #     if len(contours) == 0:
+    #         return None
+    #
+    #     c = max(contours, key=cv2.contourArea)
+    #     mask = np.zeros(cleared.shape, dtype="uint8")
+    #     cv2.drawContours(mask, [c], -1, (255,), -1)
+    #
+    #     (h, w) = cleared.shape
+    #     percent_filled = cv2.countNonZero(mask) / float(w * h)
+    #
+    #     if percent_filled < 0.01:
+    #         return None
+    #
+    #     digit_image = cv2.bitwise_and(cleared, cleared, mask=mask)
+    #     return digit_image
+
     @staticmethod
     def extract_digit_image_from_cell(cell: np.ndarray) -> DigitImage:
         """
-        Extracts a digit image from a given Sudoku cell by thresholding, clearing the borders,
-        finding contours, and isolating the digit.
+        Extracts a digit image from a given Sudoku cell by enhancing contrast,
+        thresholding, clearing borders, filtering out edge-touching contours,
+        and assuming all remaining contours are part of the digit.
 
         Args:
             cell (np.ndarray): The image of a single Sudoku cell.
@@ -53,25 +88,49 @@ class DigitExtractor:
         Returns:
             DigitImage: The extracted digit as a binary image, or None if no digit is found.
         """
-        thresh = cv2.threshold(cell, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
+        # Step 1: Enhance contrast with CLAHE
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+        clahe_enhanced = clahe.apply(cell)
+
+        # Step 2: Reduce noise with Gaussian blur
+        blurred = cv2.GaussianBlur(clahe_enhanced, (3, 3), 0)
+
+        # Step 3: Threshold (invert so digit is white)
+        thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
+
+        # Step 4: Clear border artifacts
         cleared = clear_border(thresh)
 
+        # Step 5: Find contours
         contours = cv2.findContours(cleared.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         contours = imutils.grab_contours(contours)
 
-        if len(contours) == 0:
+        if not contours:
             return None
 
-        c = max(contours, key=cv2.contourArea)
+        # Step 6: Filter out contours too close to edges
+        h, w = cleared.shape
+        margin = 3  # pixels
+        valid_contours = []
+        for contour in contours:
+            x, y, cw, ch = cv2.boundingRect(contour)
+            if x <= margin or y <= margin or x + cw >= w - margin or y + ch >= h - margin:
+                continue  # Skip contour touching the edges
+            valid_contours.append(contour)
+
+        if not valid_contours:
+            return None
+
+        # Step 7: Create mask from valid contours
         mask = np.zeros(cleared.shape, dtype="uint8")
-        cv2.drawContours(mask, [c], -1, (255,), -1)
+        cv2.drawContours(mask, valid_contours, -1, (255,), -1)
 
-        (h, w) = cleared.shape
+        # Step 8: Filter by percent filled
         percent_filled = cv2.countNonZero(mask) / float(w * h)
-
         if percent_filled < 0.01:
             return None
 
+        # Step 9: Extract digit using mask
         digit_image = cv2.bitwise_and(cleared, cleared, mask=mask)
         return digit_image
 
@@ -83,7 +142,7 @@ class DigitExtractor:
         Returns:
             DigitGrid: A 9x9 grid of digit images (or None for empty cells).
         """
-        cells = self.split_into_cells()
+        cells = self.split_into_cells() # at this point digit image is faint but visible
 
         # Extract digit images and resize them to (32, 32)
         digit_images_grid: DigitGrid = []
