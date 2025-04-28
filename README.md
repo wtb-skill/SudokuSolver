@@ -40,7 +40,7 @@ interactive web interface for users to upload images and view results in real ti
 │       ├── norvig_solver.py             # Norvig-style backtracking algorithm to solve Sudoku
 │       └── sudoku_converter.py          # Converts between board matrix and string/dictionary formats
 │
-├── generate_model/
+├── dev_tools/
 │   ├── digit_dataset/               # Generated synthetic digits for training
 │   ├── evaluation_results/          # Evaluation results and graphs
 │   ├── fonts/                       # Fonts used for synthetic digit generation
