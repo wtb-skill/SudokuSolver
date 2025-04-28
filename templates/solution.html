@@ -14,25 +14,25 @@
         <div class="image-container">
             <h3>Uploaded Image</h3>
             <div class="image-box">
-                <img src="{{ url_for('main.get_debug_image', step_name='Original_Image') }}" alt="Uploaded Sudoku">
+                <img src="{{ url_for('sudoku_solver.get_debug_image', step_name='Original_Image') }}" alt="Uploaded Sudoku">
             </div>
         </div>
         <div class="image-container">
             <h3>Processed Image</h3>
             <div class="image-box">
-                <img src="{{ url_for('main.get_debug_image', step_name='Warped_Sudoku_Board') }}" alt="Warped Image">
+                <img src="{{ url_for('sudoku_solver.get_debug_image', step_name='Warped_Sudoku_Board') }}" alt="Warped Image">
             </div>
         </div>
         <div class="image-container">
             <h3>Sudoku After Digital Recognition</h3>
             <div class="image-box">
-                <img src="{{ url_for('main.get_debug_image', step_name='Unsolved_Board') }}" alt="Unsolved Sudoku">
+                <img src="{{ url_for('sudoku_solver.get_debug_image', step_name='Unsolved_Board') }}" alt="Unsolved Sudoku">
             </div>
         </div>
         <div class="image-container">
             <h3>Solved Sudoku</h3>
             <div class="image-box">
-                <img src="{{ url_for('main.get_debug_image', step_name='Solved_Board') }}" alt="Solved Sudoku">
+                <img src="{{ url_for('sudoku_solver.get_debug_image', step_name='Solved_Board') }}" alt="Solved Sudoku">
             </div>
         </div>
     </div>
