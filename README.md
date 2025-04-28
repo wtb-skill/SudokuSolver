@@ -22,13 +22,16 @@ interactive web interface for users to upload images and view results in real ti
 ├── app.py                           # Flask app entry point
 │
 ├── routes/
-│   └── main.py                      # Blueprint for handling web routes and application logic
+│   ├── sudoku_solver.py                      # Blueprint for handling web routes and application logic
+│   └── dev_tools.py
 │
 ├── modules/
 │   ├── board_display.py             # Generates visual representations of Sudoku boards
-│   ├── digit_recognition.py         # CNN-based digit recognition from image patches
 │   ├── debug.py                     # Tools for image collection and debugging
+│   ├── digit_recognition.py         # CNN-based digit recognition from image patches
+│   ├── types.py                     # 
 │   ├── user_data_collector.py       # Handles collection and validation of user-labeled data
+│   ├── verification.py              # 
 │   ├── sudoku_image_pipeline/
 │   │    ├── step_1_image_preprocessor.py   # Preprocesses raw image (grayscale, blur, thresholding)
 │   │    ├── step_2_board_detector.py       # Detects and warps the Sudoku board from the image
@@ -41,19 +44,24 @@ interactive web interface for users to upload images and view results in real ti
 │       └── sudoku_converter.py          # Converts between board matrix and string/dictionary formats
 │
 ├── dev_tools/
-│   ├── digit_dataset/               # Generated synthetic digits for training
-│   ├── evaluation_results/          # Evaluation results and graphs
-│   ├── fonts/                       # Fonts used for synthetic digit generation
-│   ├── test_dataset/                # Dataset for model testing
-│   ├── sudoku_digit_image_extractor/
-│   │    ├── extracted_digit_images/              # Output folder containing digit images extracted from Sudoku puzzles
-│   │    ├── sudoku_images/                       # Input folder with images of real-world Sudoku puzzles
-│   │    └── sudoku_digit_image_extractor.py      # Script to extract and save digit images from real-world Sudoku examples
+│   ├── data_utils/
+│   │     ├── digit_dataset/                          # Synthetic digits generated for training
+│   │     ├── fonts/                                  # Fonts used for synthetic digit generation
+│   │     ├── sudoku_digit_image_extractor/
+│   │     │    ├── extracted_digit_images/            # Output: extracted individual digit images
+│   │     │    ├── sudoku_images/                     # Input: real-world Sudoku puzzles
+│   │     │    └── sudoku_digit_image_extractor.py    # Script to extract digits from Sudoku puzzles
+│   │     │
+│   │     ├── test_dataset/                           # Dataset for model testing
+│   │     ├── dataset_evaluation.py                   # Evaluate dataset quality (e.g., label distribution, missing digits)
+│   │     └── generate_digit_dataset.py               # Script to generate synthetic digit dataset using fonts
 │   │
-│   ├── generate_digit_dataset.py    # Script to synthesize digit images using fonts
-│   ├── model_evaluator.py           # Evaluation logic for trained models
-│   ├── sudokunet.py                 # CNN model architecture definition
-│   └── sudokunet_trainer.py         # Training pipeline for digit recognition CNN
+│   └── model_utils/
+│      ├── evaluation_results/             # Saved evaluation metrics, plots, and reports
+│      ├── model_evaluator.py              # Logic for evaluating trained models on test datasets
+│      ├── sudokunet.py                    # CNN model architecture definition
+│      ├── sudokunet_trainer.py            # Model training pipeline and tools
+│      └── test.json                       # JSON file with labeled test data for recognition evaluation
 │
 ├── models/
 │   └── sudoku_digit_recognizer.keras  # Trained Keras model for digit classification
@@ -70,7 +78,7 @@ interactive web interface for users to upload images and view results in real ti
 │
 ├── debug_images/                    # Stores debug images during development
 ├── collected_data/                  # Stores user-labeled digit samples
-├── uploads/                         # Temporary storage for uploaded Sudoku images  # old version
+├── uploads/                         # Storage for uploaded Sudoku images
 ├── flask_session_data/              # Stores session files across requests
 │
 ├── requirements.txt                 # Python dependency list
@@ -204,6 +212,8 @@ Once your dataset is ready, you can train a Convolutional Neural Network (CNN) t
 
 ## 🔌 API Route Map
 
+### Main Sudoku Solver (/)
+
 | Route | Method | Description                                                                                                        |
 |-------|--------|--------------------------------------------------------------------------------------------------------------------|
 | `/` | `GET` | Clears the session, resets the image collector, and renders the homepage (`index.html`).                           |
@@ -211,7 +221,16 @@ Once your dataset is ready, you can train a Convolutional Neural Network (CNN) t
 | `/debug-image/<step_name>` | `GET` | Serves a debug image for a specific step (used for debugging image processing pipeline).                           |
 | `/handle-collect-decision` | `POST` | Handles whether the user wants to label misclassified digits or return to homepage.                                |
 | `/correct-and-solve` | `POST` | Solves Sudoku with user input and stores corrected data for training.                                              |
-| `/process-test-dataset` | `GET` | Extracts the unsolved boards from each image as numpy array.                                                       |
+| `/uploads/<filename>` | `GET` | Serves an uploaded file from the uploads/ directory.                                                       |
+
+### Developer Tools (/dev)
+
+| Route | Method | Description                                                                                                        |
+|-------|--------|--------------------------------------------------------------------------------------------------------------------|
+| `/dev/process-all-sudoku-images` | `GET` | Automatically processes all Sudoku images in uploads/ folder, solves them, and moves to solved/ or unsolved/ folders. |
+| `/dev/process-test-dataset` | `GET` | Extracts unsolved boards from images in uploads/clean/ and saves them into test.json.                         |
+| `/dev/move-skipped-files` | `POST` | Moves images from uploads/test_folder/ that were not included in test.json back to uploads/.                              |
+| `/dev/evaluate-recognition-accuracy` | `GET` | Evaluates digit recognition accuracy by comparing predicted boards to ground-truth labels in test.json.                                              |
 
 ## 🙋 FAQ ##
 
