@@ -16,14 +16,7 @@ from modules.board_display import SudokuBoardDisplay
 # Initialize Blueprint
 dev_tools_bp = Blueprint('dev_tools', __name__, url_prefix='/dev')
 
-image_collector = ImageCollector(logging_enabled=False)
-
-# Disable logs
-logging.basicConfig(level=logging.WARNING)  # This sets the global logger level
-logging.getLogger('modules.sudoku_image.step_2_board_detector').setLevel(logging.WARNING)
-logging.getLogger('modules.sudoku_image.sudoku_pipeline').setLevel(logging.WARNING)
-logging.getLogger('modules.digit_recognition').setLevel(logging.WARNING)
-
+image_collector = ImageCollector()
 
 @dev_tools_bp.route('/process-all-sudoku-images', methods=['GET'])
 def process_all_sudoku_images():
@@ -180,6 +173,12 @@ def evaluate_recognition_accuracy():
     with the ground truth from test.json for images in 'uploads/test_folder/'.
     Only nonzero (non-empty) cells are considered.
     """
+    # Disable logs
+    logging.getLogger('modules.sudoku_image_pipeline.step_2_board_detector').setLevel(logging.WARNING)
+    logging.getLogger('modules.sudoku_image_pipeline.sudoku_pipeline').setLevel(logging.WARNING)
+    logging.getLogger('modules.digit_recognition').setLevel(logging.WARNING)
+    logging.getLogger('modules.debug').setLevel(logging.WARNING)
+
     clean_dir = 'uploads/test_folder'
     test_json_path = 'dev_tools/model_utils/test.json'
 
@@ -207,12 +206,11 @@ def evaluate_recognition_accuracy():
             file_path = os.path.join(clean_dir, file_name)
 
             # Process the image
-            sudoku_pipeline = SudokuPipeline(image_file=file_path, image_collector=image_collector,
-                                             logging_enabled=False)
+            sudoku_pipeline = SudokuPipeline(image_file=file_path, image_collector=image_collector)
             preprocessed_digit_images = sudoku_pipeline.process_sudoku_image()
 
             # Recognize digits
-            recognizer = SudokuDigitRecognizer(model_path="models/sudoku_digit_recognizer.keras", logging_enabled=False)
+            recognizer = SudokuDigitRecognizer(model_path="models/sudoku_digit_recognizer.keras")
             predicted_board = recognizer.convert_cells_to_digits(extracted_cells=preprocessed_digit_images)
             predicted_board_list = predicted_board.tolist()
 

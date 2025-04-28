@@ -13,28 +13,19 @@ logger = logging.getLogger(__name__)
 
 
 class BoardDetector:
-    def __init__(self, original_image: np.ndarray, thresholded: np.ndarray, image_collector: ImageCollector,
-                 logging_enabled: bool = True):
+    def __init__(self, original_image: np.ndarray, thresholded: np.ndarray, image_collector: ImageCollector):
         self.original_image = original_image
         self.thresholded = thresholded
         self.image_collector = image_collector
         self.warped: Optional[np.ndarray] = None
-        self.logging_enabled = logging_enabled
-
-    def _log(self, message: str):
-        """
-        Logs a message if logging is enabled.
-        """
-        if self.logging_enabled:
-            logging.info(message)
 
     def detect(self) -> np.ndarray:
         try:
             corners = self._detect_contour_corners()
             self.warped = self.warp_board(corners, label="Warped_Sudoku_Board")
         except Exception as e:
-            self._log(f"[Primary Detection Failed] {e}")
-            self._log(f"[Falling back to grid-based detection method...]")
+            logger.info(f"[Primary Detection Failed] {e}")
+            logger.info(f"[Falling back to grid-based detection method...]")
             corners = self.detect_fallback()
             self.warped = self.warp_board(corners, label="Fallback_Warped_Sudoku_Board")
         return self.warped

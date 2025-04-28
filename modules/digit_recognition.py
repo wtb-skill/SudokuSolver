@@ -9,21 +9,14 @@ logger = logging.getLogger(__name__)
 
 
 class SudokuDigitRecognizer:
-    def __init__(self, model_path: str, logging_enabled: bool = True):
+    def __init__(self, model_path: str):
         """
         Initializes the SudokuDigitRecognizer with a pre-trained model.
 
         Parameters:
             model_path (str): Path to the trained digit recognition model.
-            logging_enabled (bool): Whether to enable logging (default is True).
         """
         self.model = load_model(model_path)
-        self.logging_enabled = logging_enabled
-
-    def _log(self, message: str):
-        """Helper function to log only if logging is enabled."""
-        if self.logging_enabled:
-            logging.info(message)
 
     def _predict_single_digit(self, cell: ProcessedDigitImage) -> int:
         """
@@ -42,8 +35,8 @@ class SudokuDigitRecognizer:
         prob_str = ", ".join([f"{i+1}: {prob:.2%}" for i, prob in enumerate(probabilities)])
 
         # Use internal _log method
-        self._log(f"   ✅ Predicted Digit: {predicted_digit}")
-        self._log(f"   📊 Probability Distribution: {prob_str}")
+        logger.info(f"   ✅ Predicted Digit: {predicted_digit}")
+        logger.info(f"   📊 Probability Distribution: {prob_str}")
 
         return predicted_digit
 
@@ -64,7 +57,7 @@ class SudokuDigitRecognizer:
             for col in range(9):
                 cell = extracted_cells[row][col]
                 if cell is not None:
-                    self._log(f"[INFO] 🧩 Prediction on cell [{row + 1}][{col + 1}].")
+                    logger.info(f"[INFO] 🧩 Prediction on cell [{row + 1}][{col + 1}].")
                     digit_board[row, col] = self._predict_single_digit(cell)
 
         return digit_board

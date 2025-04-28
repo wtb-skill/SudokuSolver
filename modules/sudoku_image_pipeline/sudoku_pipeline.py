@@ -22,17 +22,15 @@ class SudokuPipeline:
     board detection, digit extraction, and digit preprocessing for model input.
     """
 
-    def __init__(self, image_file, image_collector: ImageCollector, logging_enabled: bool = True):
+    def __init__(self, image_file, image_collector: ImageCollector):
         """
         Initializes the pipeline by reading and decoding the uploaded image file.
 
         Args:
             image_file (str or FileStorage): Path to the uploaded image file or a FileStorage object.
             image_collector (ImageCollector): A debug image collector to store intermediate images.
-            logging_enabled (bool): Whether to enable logging output. Default is True.
         """
         self.image_collector: ImageCollector = image_collector
-        self.logging_enabled = logging_enabled
 
         # Check if image_file is a path (string) or FileStorage object
         if isinstance(image_file, str):
@@ -47,13 +45,6 @@ class SudokuPipeline:
         else:
             raise ValueError("image_file must be a string (path) or a FileStorage object.")
 
-    def _log(self, message: str):
-        """
-        Logs a message if logging is enabled.
-        """
-        if self.logging_enabled:
-            logging.info(message)
-
     def process_sudoku_image(self) -> ProcessedDigitGrid:
         """
         Executes the full Sudoku processing pipeline.
@@ -61,17 +52,17 @@ class SudokuPipeline:
         Returns:
             ProcessedDigitGrid: A 9x9 grid of processed digit images ready for model inference.
         """
-        self._log("Preprocessing the image...")
+        logger.info("Preprocessing the image...")
         preprocessor = ImagePreprocessor(self.image, self.image_collector)
         thresholded = preprocessor.preprocess()
 
-        self._log("Detecting Sudoku board...")
+        logger.info("Detecting Sudoku board...")
         detector = BoardDetector(preprocessor.get_original(), thresholded, self.image_collector)
         warped = detector.detect()
 
-        self._log("Extracting digits from Sudoku cells...")
+        logger.info("Extracting digits from Sudoku cells...")
         extractor = DigitExtractor(warped, self.image_collector)
         digits = extractor.extract_digit_images()
 
-        self._log("Preprocessing the extracted cells...")
+        logger.info("Preprocessing the extracted cells...")
         return DigitPreprocessor.preprocess(digits)
