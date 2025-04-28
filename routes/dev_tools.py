@@ -207,3 +207,43 @@ def evaluate_recognition_accuracy():
     print(f"\nOverall accuracy: {overall_accuracy}% based on {total_digits} digits.")
 
     return "Evaluation completed. Check server console output!"
+
+@dev_tools_bp.route('/move-skipped-files', methods=['POST'])
+def move_skipped_files():
+    """
+    Moves images from 'uploads/test_folder' that are NOT in test.json
+    to the parent 'uploads/' directory.
+    """
+    import os
+    import json
+    import shutil
+
+    clean_dir = 'uploads/test_folder'
+    uploads_dir = 'uploads'
+    test_json_path = 'dev_tools/model_utils/test.json'
+
+    if not os.path.exists(test_json_path):
+        return "test.json not found. Please generate it first.", 400
+
+    # Load ground truth
+    with open(test_json_path, 'r') as f:
+        ground_truth_data = json.load(f)
+
+    files = [f for f in os.listdir(clean_dir) if f.endswith(('.png', '.jpg', '.jpeg'))]
+
+    moved_files = []
+
+    for file_name in files:
+        if file_name not in ground_truth_data:
+            source_path = os.path.join(clean_dir, file_name)
+            destination_path = os.path.join(uploads_dir, file_name)
+
+            # Move the file
+            shutil.move(source_path, destination_path)
+            moved_files.append(file_name)
+
+    if moved_files:
+        return f"Moved {len(moved_files)} skipped files: {', '.join(moved_files)}"
+    else:
+        return "No skipped files found to move."
+
