@@ -331,8 +331,8 @@ class ModelEvaluator:
 
 
 if __name__ == '__main__':
-    MODEL_PATH = "../models/sudoku_digit_recognizer.keras"
-    TEST_DATASET_PATH = "test_dataset"
+    MODEL_PATH = "../../models/sudoku_digit_recognizer.keras"
+    TEST_DATASET_PATH = "../data_utils/test_dataset"
 
     evaluator = ModelEvaluator(
         model_path=MODEL_PATH,

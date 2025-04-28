@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import cv2
 import os
+from pathlib import Path
 
 class SudokunetTrainer:
     def __init__(self, dataset_path: str, model_output_path: str, image_size: int = 32,
@@ -195,7 +196,7 @@ class SudokunetTrainer:
         """
         Runs the complete training pipeline.
         """
-        self.load_mnist_dataset() # load_dataset or load_mnist_dataset
+        self.load_dataset() # load_dataset or load_mnist_dataset
         self.compile_model()
         self.train()
         self.save_model()
@@ -212,9 +213,14 @@ class SudokunetTrainer:
 
 
 if __name__ == "__main__":
+
+    project_root = Path(__file__).resolve().parent.parent.parent
+    dataset_path = str(project_root / "dev_tools" / "data_utils" / "digit_dataset")
+    model_output_path = str(project_root / "models" / "sudoku_digit_recognizer.keras")
+
     trainer = SudokunetTrainer(
-        dataset_path="generate_model/digit_dataset",
-        model_output_path="models/sudoku_digit_recognizer.keras",
+        dataset_path=dataset_path,
+        model_output_path=model_output_path,
         image_size=32,
         init_lr=1e-3,
         epochs=10,
