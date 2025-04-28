@@ -1,4 +1,4 @@
-# modules/sudoku_image/types.py
+# modules/types.py
 from typing import List, Optional
 import numpy as np
 
