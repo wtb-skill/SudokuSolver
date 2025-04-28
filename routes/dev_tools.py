@@ -18,6 +18,9 @@ dev_tools_bp = Blueprint('dev_tools', __name__, url_prefix='/dev')
 
 image_collector = ImageCollector()
 
+# Create a logger for this module
+logger = logging.getLogger(__name__)
+
 @dev_tools_bp.route('/process-all-sudoku-images', methods=['GET'])
 def process_all_sudoku_images():
     """
@@ -199,7 +202,7 @@ def evaluate_recognition_accuracy():
     # Wrap with tqdm to add a progress bar
     for file_name in tqdm(files, desc="Processing files", unit="file"):
         if file_name not in ground_truth_data:
-            print(f"Skipping {file_name}: no ground truth available.")
+            logger.info(f"Skipping {file_name}: no ground truth available.")
             continue
 
         try:
@@ -241,13 +244,11 @@ def evaluate_recognition_accuracy():
                 'accuracy': image_accuracy
             })
 
-            # print(f"{file_name}: {image_accuracy}% accuracy ({image_correct_digits}/{image_total_digits})")
-
         except Exception as e:
             print(f"Error processing {file_name}: {str(e)}")
 
     # After all files
     overall_accuracy = round(100 * correct_digits / total_digits, 2) if total_digits else 0
-    print(f"\nOverall accuracy: {overall_accuracy}% based on {total_digits} digits.")
+    logger.info(f"\nOverall accuracy: {overall_accuracy}% based on {total_digits} digits.")
 
     return "Evaluation completed. Check server console output!"
