@@ -3,25 +3,38 @@
 import cv2
 import imutils
 import numpy as np
+import logging
 from imutils.perspective import four_point_transform
 from typing import Optional
 from modules.debug import ImageCollector
 
+# Create a logger for this module
+logger = logging.getLogger(__name__)
+
 
 class BoardDetector:
-    def __init__(self, original_image: np.ndarray, thresholded: np.ndarray, image_collector: ImageCollector):
+    def __init__(self, original_image: np.ndarray, thresholded: np.ndarray, image_collector: ImageCollector,
+                 logging_enabled: bool = True):
         self.original_image = original_image
         self.thresholded = thresholded
         self.image_collector = image_collector
         self.warped: Optional[np.ndarray] = None
+        self.logging_enabled = logging_enabled
+
+    def _log(self, message: str):
+        """
+        Logs a message if logging is enabled.
+        """
+        if self.logging_enabled:
+            logging.info(message)
 
     def detect(self) -> np.ndarray:
         try:
             corners = self._detect_contour_corners()
             self.warped = self.warp_board(corners, label="Warped_Sudoku_Board")
         except Exception as e:
-            print(f"[Primary Detection Failed] {e}")
-            print("[Falling back to grid-based detection method...]")
+            self._log(f"[Primary Detection Failed] {e}")
+            self._log(f"[Falling back to grid-based detection method...]")
             corners = self.detect_fallback()
             self.warped = self.warp_board(corners, label="Fallback_Warped_Sudoku_Board")
         return self.warped

@@ -1,8 +1,10 @@
 # dev_tools.py
 import os
 import shutil
+import json
+import logging
+from tqdm import tqdm
 from flask import Blueprint
-
 from modules.digit_recognition import SudokuDigitRecognizer
 from modules.debug import ImageCollector
 from modules.solving_algorithm.norvig_solver import NorvigSolver
@@ -10,11 +12,18 @@ from modules.solving_algorithm.sudoku_converter import SudokuConverter
 from modules.sudoku_image_pipeline.sudoku_pipeline import SudokuPipeline
 from modules.board_display import SudokuBoardDisplay
 
+
 # Initialize Blueprint
 dev_tools_bp = Blueprint('dev_tools', __name__, url_prefix='/dev')
 
+image_collector = ImageCollector(logging_enabled=False)
 
-image_collector = ImageCollector()
+# Disable logs
+logging.basicConfig(level=logging.WARNING)  # This sets the global logger level
+logging.getLogger('modules.sudoku_image.step_2_board_detector').setLevel(logging.WARNING)
+logging.getLogger('modules.sudoku_image.sudoku_pipeline').setLevel(logging.WARNING)
+logging.getLogger('modules.digit_recognition').setLevel(logging.WARNING)
+
 
 @dev_tools_bp.route('/process-all-sudoku-images', methods=['GET'])
 def process_all_sudoku_images():
@@ -125,89 +134,6 @@ def process_test_dataset():
 
     return "Test dataset processed and saved to test.json!"
 
-@dev_tools_bp.route('/evaluate-recognition-accuracy', methods=['GET'])
-def evaluate_recognition_accuracy():
-    """
-    Evaluates the digit recognition accuracy by comparing predicted unsolved boards
-    with the ground truth from test.json for images in 'uploads/clean/'.
-    Only nonzero (non-empty) cells are considered.
-    """
-
-    import os
-    import json
-
-    clean_dir = 'uploads/test_folder'
-    test_json_path = 'test.json'
-
-    if not os.path.exists(test_json_path):
-        return "test.json not found. Please generate it first.", 400
-
-    # Load ground truth
-    with open(test_json_path, 'r') as f:
-        ground_truth_data = json.load(f)
-
-    files = [f for f in os.listdir(clean_dir) if f.endswith(('.png', '.jpg', '.jpeg'))]
-
-    total_digits = 0
-    correct_digits = 0
-
-    results = []
-
-    for file_name in files:
-        if file_name not in ground_truth_data:
-            print(f"Skipping {file_name}: no ground truth available.")
-            continue
-
-        try:
-            file_path = os.path.join(clean_dir, file_name)
-
-            # Process the image
-            sudoku_pipeline = SudokuPipeline(image_file=file_path, image_collector=image_collector)
-            preprocessed_digit_images = sudoku_pipeline.process_sudoku_image()
-
-            # Recognize digits
-            recognizer = SudokuDigitRecognizer(model_path="models/sudoku_digit_recognizer.keras")
-            predicted_board = recognizer.convert_cells_to_digits(extracted_cells=preprocessed_digit_images)
-            predicted_board_list = predicted_board.tolist()
-
-            # Ground truth
-            true_board_list = ground_truth_data[file_name]
-
-            # Compare per image
-            image_total_digits = 0
-            image_correct_digits = 0
-
-            for i in range(9):
-                for j in range(9):
-                    true_digit = true_board_list[i][j]
-                    pred_digit = predicted_board_list[i][j]
-                    if true_digit != 0:
-                        image_total_digits += 1
-                        if true_digit == pred_digit:
-                            image_correct_digits += 1
-
-            # Update global stats
-            total_digits += image_total_digits
-            correct_digits += image_correct_digits
-
-            # Per image stats
-            image_accuracy = round(100 * image_correct_digits / image_total_digits, 2) if image_total_digits else 0
-            results.append({
-                'file': file_name,
-                'accuracy': image_accuracy
-            })
-
-            print(f"{file_name}: {image_accuracy}% accuracy ({image_correct_digits}/{image_total_digits})")
-
-        except Exception as e:
-            print(f"Error processing {file_name}: {str(e)}")
-
-    # After all files
-    overall_accuracy = round(100 * correct_digits / total_digits, 2) if total_digits else 0
-    print(f"\nOverall accuracy: {overall_accuracy}% based on {total_digits} digits.")
-
-    return "Evaluation completed. Check server console output!"
-
 @dev_tools_bp.route('/move-skipped-files', methods=['POST'])
 def move_skipped_files():
     """
@@ -247,3 +173,83 @@ def move_skipped_files():
     else:
         return "No skipped files found to move."
 
+@dev_tools_bp.route('/evaluate-recognition-accuracy', methods=['GET'])
+def evaluate_recognition_accuracy():
+    """
+    Evaluates the digit recognition accuracy by comparing predicted unsolved boards
+    with the ground truth from test.json for images in 'uploads/test_folder/'.
+    Only nonzero (non-empty) cells are considered.
+    """
+    clean_dir = 'uploads/test_folder'
+    test_json_path = 'dev_tools/model_utils/test.json'
+
+    if not os.path.exists(test_json_path):
+        return "test.json not found. Please generate it first.", 400
+
+    # Load ground truth
+    with open(test_json_path, 'r') as f:
+        ground_truth_data = json.load(f)
+
+    files = [f for f in os.listdir(clean_dir) if f.endswith(('.png', '.jpg', '.jpeg'))]
+
+    total_digits = 0
+    correct_digits = 0
+
+    results = []
+
+    # Wrap with tqdm to add a progress bar
+    for file_name in tqdm(files, desc="Processing files", unit="file"):
+        if file_name not in ground_truth_data:
+            print(f"Skipping {file_name}: no ground truth available.")
+            continue
+
+        try:
+            file_path = os.path.join(clean_dir, file_name)
+
+            # Process the image
+            sudoku_pipeline = SudokuPipeline(image_file=file_path, image_collector=image_collector,
+                                             logging_enabled=False)
+            preprocessed_digit_images = sudoku_pipeline.process_sudoku_image()
+
+            # Recognize digits
+            recognizer = SudokuDigitRecognizer(model_path="models/sudoku_digit_recognizer.keras", logging_enabled=False)
+            predicted_board = recognizer.convert_cells_to_digits(extracted_cells=preprocessed_digit_images)
+            predicted_board_list = predicted_board.tolist()
+
+            # Ground truth
+            true_board_list = ground_truth_data[file_name]
+
+            # Compare per image
+            image_total_digits = 0
+            image_correct_digits = 0
+
+            for i in range(9):
+                for j in range(9):
+                    true_digit = true_board_list[i][j]
+                    pred_digit = predicted_board_list[i][j]
+                    if true_digit != 0:
+                        image_total_digits += 1
+                        if true_digit == pred_digit:
+                            image_correct_digits += 1
+
+            # Update global stats
+            total_digits += image_total_digits
+            correct_digits += image_correct_digits
+
+            # Per image stats
+            image_accuracy = round(100 * image_correct_digits / image_total_digits, 2) if image_total_digits else 0
+            results.append({
+                'file': file_name,
+                'accuracy': image_accuracy
+            })
+
+            # print(f"{file_name}: {image_accuracy}% accuracy ({image_correct_digits}/{image_total_digits})")
+
+        except Exception as e:
+            print(f"Error processing {file_name}: {str(e)}")
+
+    # After all files
+    overall_accuracy = round(100 * correct_digits / total_digits, 2) if total_digits else 0
+    print(f"\nOverall accuracy: {overall_accuracy}% based on {total_digits} digits.")
+
+    return "Evaluation completed. Check server console output!"

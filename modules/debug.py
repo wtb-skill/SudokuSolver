@@ -12,17 +12,19 @@ class ImageCollector:
     Useful for visualizing processing stages such as preprocessing, digit detection, and final output.
     """
 
-    def __init__(self, output_dir: str = "debug_images") -> None:
+    def __init__(self, output_dir: str = "debug_images", logging_enabled: bool = True) -> None:
         """
         Initializes the image collector, creating an output directory if it doesn't exist.
 
         Args:
             output_dir (str): Directory where debug images will be saved.
+            logging_enabled (bool): Whether to print debug messages during collection.
         """
         self.output_dir: str = output_dir
-        self.images: Dict[str, np.ndarray] = {}  # Mapping of step name to image
-        self.grid_image: Optional[np.ndarray] = None  # Optional grid visualization image
-        self.digit_cells: List[np.ndarray] = []  # Collected 32x32 digit images
+        self.images: Dict[str, np.ndarray] = {}
+        self.grid_image: Optional[np.ndarray] = None
+        self.digit_cells: List[np.ndarray] = []
+        self.logging_enabled: bool = logging_enabled  # <<<<<<<<<<<< added here!
 
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
@@ -144,14 +146,16 @@ class ImageCollector:
             for cell in row:
                 if cell is not None:
                     if cell.shape != (32, 32):
-                        print(f"[Warning] Invalid image shape: expected (32, 32), got {cell.shape}")
+                        if self.logging_enabled:
+                            print(f"[Warning] Invalid image shape: expected (32, 32), got {cell.shape}")
                     else:
                         self.digit_cells.append(cell.copy())
 
-        if self.digit_cells:
-            print(f"Collected {len(self.digit_cells)} digit cell(s).")
-        else:
-            print("No valid digit cells were collected.")
+        if self.logging_enabled:
+            if self.digit_cells:
+                print(f"Collected {len(self.digit_cells)} digit cell(s).")
+            else:
+                print("No valid digit cells were collected.")
 
     def reset(self) -> None:
         """

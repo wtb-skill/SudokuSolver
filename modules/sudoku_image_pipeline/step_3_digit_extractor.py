@@ -41,40 +41,6 @@ class DigitExtractor:
         rows = np.vsplit(self.board, grid_size)
         return [np.hsplit(row, grid_size) for row in rows]
 
-    # @staticmethod
-    # def extract_digit_image_from_cell(cell: np.ndarray) -> DigitImage:
-    #     """
-    #     Extracts a digit image from a given Sudoku cell by thresholding, clearing the borders,
-    #     finding contours, and isolating the digit.
-    #
-    #     Args:
-    #         cell (np.ndarray): The image of a single Sudoku cell.
-    #
-    #     Returns:
-    #         DigitImage: The extracted digit as a binary image, or None if no digit is found.
-    #     """
-    #     thresh = cv2.threshold(cell, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
-    #     cleared = clear_border(thresh)
-    #
-    #     contours = cv2.findContours(cleared.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    #     contours = imutils.grab_contours(contours)
-    #
-    #     if len(contours) == 0:
-    #         return None
-    #
-    #     c = max(contours, key=cv2.contourArea)
-    #     mask = np.zeros(cleared.shape, dtype="uint8")
-    #     cv2.drawContours(mask, [c], -1, (255,), -1)
-    #
-    #     (h, w) = cleared.shape
-    #     percent_filled = cv2.countNonZero(mask) / float(w * h)
-    #
-    #     if percent_filled < 0.01:
-    #         return None
-    #
-    #     digit_image = cv2.bitwise_and(cleared, cleared, mask=mask)
-    #     return digit_image
-
     @staticmethod
     def extract_digit_image_from_cell(cell: np.ndarray) -> DigitImage:
         """

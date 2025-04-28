@@ -5,6 +5,11 @@ from routes.sudoku_solver import sudoku_bp
 from routes.dev_tools import dev_tools_bp
 import shutil
 import os
+import logging
+
+
+# Set up logging configuration globally
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Delete old session files on every restart
 session_folder = './flask_session_data'
