@@ -1,7 +1,8 @@
 # app.py
 from flask import Flask
 from flask_session import Session
-from routes.main import main_bp  # Import routes from the main.py file
+from routes.sudoku_solver import sudoku_bp
+from routes.dev_tools import dev_tools_bp
 import shutil
 import os
 
@@ -13,8 +14,6 @@ os.makedirs(session_folder, exist_ok=True)
 app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'  # Set a secret key for the session
 app.config['UPLOAD_FOLDER'] = 'uploads/'
-
-# Flask-Session config
 app.config['SESSION_TYPE'] = 'filesystem'  # Store session data on disk
 app.config['SESSION_FILE_DIR'] = './flask_session_data'
 app.config['SESSION_PERMANENT'] = False  # Only lasts for the session unless overridden
@@ -23,7 +22,8 @@ app.config['SESSION_PERMANENT'] = False  # Only lasts for the session unless ove
 Session(app)
 
 # Register blueprint for route handling
-app.register_blueprint(main_bp)
+app.register_blueprint(sudoku_bp)
+app.register_blueprint(dev_tools_bp)
 
 if __name__ == '__main__':
     app.run(debug=True)

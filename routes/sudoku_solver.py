@@ -1,4 +1,4 @@
-# main.py
+# sudoku_solver.py
 import os
 
 # Suppress TensorFlow oneDNN warnings
@@ -15,11 +15,12 @@ from modules.sudoku_image_pipeline.sudoku_pipeline import SudokuPipeline
 from modules.user_data_collector import UserDataCollector
 import pickle
 import numpy as np
-import shutil
 import json
+from pathlib import Path
+
 
 # Initialize Blueprint
-main_bp = Blueprint('main', __name__)
+sudoku_bp = Blueprint('sudoku_solver', __name__)
 
 # Ensure the uploads folder exists
 os.makedirs('uploads', exist_ok=True)
@@ -27,7 +28,7 @@ os.makedirs('uploads', exist_ok=True)
 # Initialize ImageCollector instance
 image_collector = ImageCollector()
 
-@main_bp.route('/')
+@sudoku_bp.route('/')
 def home() -> str:
     """
     Clears the session and resets the image collector, then renders the home page.
@@ -39,7 +40,7 @@ def home() -> str:
     image_collector.reset()
     return render_template('index.html')
 
-@main_bp.route('/process-sudoku-image', methods=['POST'])
+@sudoku_bp.route('/process-sudoku-image', methods=['POST'])
 def process_sudoku_image() -> str or Response:
     """
     Handles the uploaded file, processes the Sudoku image, recognizes digits,
@@ -115,7 +116,7 @@ def process_sudoku_image() -> str or Response:
         except Exception as e:
             return f"Error processing image: {str(e)}"
 
-@main_bp.route('/uploads/<filename>')
+@sudoku_bp.route('/uploads/<filename>')
 def uploaded_file(filename: str) -> Response:
     """
     Serves an uploaded file from the 'uploads' directory.
@@ -128,7 +129,7 @@ def uploaded_file(filename: str) -> Response:
     """
     return send_from_directory('uploads', filename)
 
-@main_bp.route('/debug-image/<step_name>')
+@sudoku_bp.route('/debug-image/<step_name>')
 def get_debug_image(step_name) -> Response:
     """
     Serves a debug image directly from memory.
@@ -146,7 +147,7 @@ def get_debug_image(step_name) -> Response:
 
     return send_file(image_bytes, mimetype='image/jpeg')
 
-@main_bp.route('/handle-collect-decision', methods=['POST'])
+@sudoku_bp.route('/handle-collect-decision', methods=['POST'])
 def handle_collect_decision() -> str or Response:
     """
     Handles the user's decision to either collect data or go back to the home page.
@@ -165,7 +166,7 @@ def handle_collect_decision() -> str or Response:
 
     return redirect('/')
 
-@main_bp.route('/correct-and-solve', methods=['POST'])
+@sudoku_bp.route('/correct-and-solve', methods=['POST'])
 def correct_and_solve() -> str or Response:
     """
     Collects user-provided labels for the Sudoku puzzle, saves the labeled data,
@@ -192,17 +193,32 @@ def correct_and_solve() -> str or Response:
         corrected_board = np.array([labels_81[i:i + 9] for i in range(0, len(labels), 9)])
 
         # Step 4.5: Save corrected board to test.json ---
+        # Build the test.json path nicely
+        project_root = Path(__file__).resolve().parent.parent
+        test_json_path = project_root / 'dev_tools' / 'model_utils' / 'test.json'
+
+        # Ensure the parent directory exists
+        test_json_path.parent.mkdir(parents=True, exist_ok=True)
+
         filename = session.get('filename')
+
         if filename:
             test_data = {}
-            if os.path.exists('test.json'):
-                with open('test.json', 'r') as json_file:
+
+            # If file exists, load it
+            if test_json_path.exists():
+                with open(test_json_path, 'r') as json_file:
                     test_data = json.load(json_file)
+            else:
+                # If not, create an empty JSON
+                with open(test_json_path, 'w') as json_file:
+                    json.dump({}, json_file, indent=4)
 
+            # Update the test data
             if filename not in test_data:
-                test_data[filename] = corrected_board.tolist()  # <-- save as plain list
+                test_data[filename] = corrected_board.tolist()
 
-                with open('test.json', 'w') as json_file:
+                with open(test_json_path, 'w') as json_file:
                     json.dump(test_data, json_file, indent=4)
 
         # Step 5: Convert to solver grid format
@@ -232,111 +248,5 @@ def correct_and_solve() -> str or Response:
     except Exception as e:
         return f"Unexpected error: {str(e)}", 500
 
-@main_bp.route('/process-all-sudoku-images', methods=['GET'])
-def process_all_sudoku_images():
-    """
-    Automatically processes all Sudoku images in the 'uploads/' folder,
-    attempting to solve each one and move the result to either 'solved/' or 'unsolved/' folder.
-    """
 
-    upload_dir = 'uploads'
-    solved_dir = 'uploads/solved'
-    unsolved_dir = 'uploads/unsolved'
 
-    # Create the necessary directories if they don't exist
-    os.makedirs(solved_dir, exist_ok=True)
-    os.makedirs(unsolved_dir, exist_ok=True)
-
-    # List all files in the 'uploads' folder
-    files = [f for f in os.listdir(upload_dir) if f.endswith(('.png', '.jpg', '.jpeg'))]
-
-    # Process each image file
-    for file_name in files:
-        try:
-            file_path = os.path.join(upload_dir, file_name)
-
-            # Step 1: Process the image and extract the 2D list of digit images
-            sudoku_pipeline = SudokuPipeline(image_file=file_path, image_collector=image_collector)
-            preprocessed_digit_images = sudoku_pipeline.process_sudoku_image()
-
-            # Step 2: Categorize digit images into actual numbers
-            recognizer = SudokuDigitRecognizer(model_path="models/sudoku_digit_recognizer.keras")
-            unsolved_board = recognizer.convert_cells_to_digits(extracted_cells=preprocessed_digit_images)
-
-            # Convert the 2D digit board to a Sudoku grid string
-            converter = SudokuConverter()
-            sudoku_grid = converter.board_to_string(digit_board=unsolved_board)
-
-            # Step 3: Solve the Sudoku puzzle
-            solver = NorvigSolver()
-            solved_grid = solver.solve(grid=sudoku_grid)
-
-            if solved_grid:
-                # If solved, move to the 'solved' folder
-                solved_board = converter.dict_to_board(sudoku_dict=solved_grid)
-                sudoku_board_display = SudokuBoardDisplay(image_collector=image_collector)
-                sudoku_board_display.draw_solved_board(unsolved_board=unsolved_board, solved_board=solved_board)
-
-                # Move the file to the 'solved' folder
-                solved_file_path = os.path.join(solved_dir, file_name)
-                shutil.move(file_path, solved_file_path)
-
-            else:
-                # If not solved, move to the 'unsolved' folder
-                unsolved_file_path = os.path.join(unsolved_dir, file_name)
-                shutil.move(file_path, unsolved_file_path)
-
-        except Exception as e:
-            print(f"Error processing {file_name}: {str(e)}")
-
-    # Return a message when all images are processed
-    return "All images have been processed!"
-
-@main_bp.route('/process-test-dataset', methods=['GET'])
-def process_test_dataset():
-    """
-    Processes all new Sudoku images in 'uploads/clean/', extracts the unsolved board for each,
-    and saves the results in 'test.json' with format {filename: unsolved_board}.
-    """
-
-    import os
-    import json
-
-    clean_dir = 'uploads/clean'
-    os.makedirs(clean_dir, exist_ok=True)
-
-    # Load existing data if test.json exists
-    test_data = {}
-    if os.path.exists('test.json'):
-        with open('test.json', 'r') as json_file:
-            test_data = json.load(json_file)
-
-    files = [f for f in os.listdir(clean_dir) if f.endswith(('.png', '.jpg', '.jpeg'))]
-
-    for file_name in files:
-        if file_name in test_data:
-            # Skip files that are already processed
-            continue
-
-        try:
-            file_path = os.path.join(clean_dir, file_name)
-
-            # Step 1: Process the image and extract the 2D list of digit images
-            sudoku_pipeline = SudokuPipeline(image_file=file_path, image_collector=image_collector)
-            preprocessed_digit_images = sudoku_pipeline.process_sudoku_image()
-
-            # Step 2: Categorize digit images into actual numbers
-            recognizer = SudokuDigitRecognizer(model_path="models/sudoku_digit_recognizer.keras")
-            unsolved_board = recognizer.convert_cells_to_digits(extracted_cells=preprocessed_digit_images)
-
-            # Store the board as a list of lists (for JSON compatibility)
-            test_data[file_name] = unsolved_board.tolist()
-
-        except Exception as e:
-            print(f"Error processing {file_name}: {str(e)}")
-
-    # Save updated test_data to test.json
-    with open('test.json', 'w') as json_file:
-        json.dump(test_data, json_file, indent=4)
-
-    return "Test dataset processed and saved to test.json!"
