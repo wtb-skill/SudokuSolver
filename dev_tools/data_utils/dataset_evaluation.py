@@ -46,9 +46,9 @@ class DigitDatasetEvaluator:
         print(text)
         self.report_lines.append(text)
 
-    def class_distribution(self) -> Dict[str, Dict[str, int]]:
-        """Analyzes and logs the distribution of clean vs distorted images per digit."""
-        self.log("\n📊 [Step 1] Starting class distribution analysis...")
+    def step_1_class_distribution(self) -> Dict[str, Dict[str, int]]:
+        """Analyzes class distribution, imbalance, and generates histogram."""
+        self.log("\n📊 [Step 1] Starting class distribution & balance analysis...")
         summary: Dict[str, Dict[str, int]] = {}
 
         for digit, path in self.digit_dirs.items():
@@ -61,12 +61,100 @@ class DigitDatasetEvaluator:
             summary[digit] = {"total": len(images), "clean": clean, "distorted": distorted}
             self.log(f"   - Digit {digit}: {summary[digit]}")
 
-        self.log("✅ [Step 1 Complete] Class distribution analysis done.\n")
+        # ⚖️ Class imbalance calculation
+        class_totals = {d: summary[d]["total"] for d in summary}
+        min_class = min(class_totals, key=class_totals.get)
+        max_class = max(class_totals, key=class_totals.get)
+        imbalance_ratio = class_totals[max_class] / max(1, class_totals[min_class])
+
+        self.log(f"[Step 1] Class sample counts: {class_totals}")
+        self.log(f"[Step 1] Imbalance ratio (max/min): {imbalance_ratio:.2f}")
+        if imbalance_ratio > 3:
+            self.log("⚠️ [Step 1] Warning: High class imbalance detected.")
+
+        # 📊 Generate grouped histogram
+        try:
+            digits = sorted(summary.keys(), key=int)
+            totals = [summary[d]["total"] for d in digits]
+            cleans = [summary[d]["clean"] for d in digits]
+            distorteds = [summary[d]["distorted"] for d in digits]
+
+            x = range(len(digits))
+            width = 0.3
+
+            plt.figure(figsize=(10, 6))
+            plt.bar([i - width for i in x], totals, width=width, label="Total", color="skyblue")
+            plt.bar(x, cleans, width=width, label="Clean", color="green")
+            plt.bar([i + width for i in x], distorteds, width=width, label="Distorted", color="red")
+
+            plt.xlabel("Digit Class")
+            plt.ylabel("Number of Images")
+            plt.title("Image Distribution per Digit (Total / Clean / Distorted)")
+            plt.xticks(x, digits)
+            plt.legend()
+            plt.tight_layout()
+
+            save_path = os.path.join(self.output_dir, "class_distribution_histogram.png")
+            plt.savefig(save_path)
+            plt.close()
+
+            self.log(f"📊 [Step 1] Saved class distribution histogram → {save_path}")
+        except Exception as e:
+            self.log(f"[Step 1] ❌ Failed to generate histogram: {e}")
+
+        self.log("✅ [Step 1 Complete] Class distribution & balance analysis done.\n")
         return summary
 
-    def visualize_sample_grid(self, samples_per_digit: int = 5) -> None:
+    def step_2_check_image_dimensions(self) -> None:
+        """Check for inconsistent image dimensions across dataset."""
+        self.log("\n📏 [Step 2] Checking image dimensions...")
+
+        dim_counter = defaultdict(int)
+        dim_examples = defaultdict(list)
+
+        all_images = [(digit, os.path.join(path, img))
+                      for digit, path in self.digit_dirs.items()
+                      for img in os.listdir(path)]
+
+        with tqdm(total=len(all_images), desc="Analyzing image sizes", ncols=100) as bar:
+            for digit, img_path in all_images:
+                try:
+                    img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+                    if img is not None:
+                        h, w = img.shape
+                        dim_counter[(h, w)] += 1
+                        if len(dim_examples[(h, w)]) < 3:
+                            dim_examples[(h, w)].append(img_path)
+                except Exception:
+                    pass
+                bar.update(1)
+
+        self.log(f"[Step 2] Found {len(dim_counter)} unique image sizes.")
+        for dim, count in sorted(dim_counter.items(), key=lambda x: -x[1]):
+            self.log(f"[Step 2] Size {dim}: {count} images. Examples: {dim_examples[dim]}")
+
+        # 📊 Generate histogram
+        labels = [f"{h}x{w}" for (h, w) in dim_counter.keys()]
+        counts = list(dim_counter.values())
+
+        plt.figure(figsize=(10, 6))
+        plt.bar(labels, counts, color='skyblue', edgecolor='black')
+        plt.title("Image Dimension Distribution")
+        plt.xlabel("Dimensions (HxW)")
+        plt.ylabel("Number of Images")
+        plt.xticks(rotation=45, ha='right')
+        plt.tight_layout()
+
+        save_path = os.path.join(self.output_dir, "image_dimension_histogram.png")
+        plt.savefig(save_path)
+        plt.close()
+
+        self.log(f"📊 [Step 2] Saved image dimension histogram → {save_path}")
+        self.log("✅ [Step 2 Complete] Image dimension check done.\n")
+
+    def step_3_visualize_sample_grid(self, samples_per_digit: int = 5) -> None:
         """Saves a grid visualization of random samples for each digit."""
-        self.log("\n🖼️ [Step 2] Generating sample grid visualization...")
+        self.log("\n🖼️ [Step 3] Generating sample grid visualization...")
 
         fig, axs = plt.subplots(9, samples_per_digit, figsize=(samples_per_digit * 1.5, 13))
         for row, digit in enumerate(self.digit_dirs):
@@ -84,11 +172,11 @@ class DigitDatasetEvaluator:
         output_path = os.path.join(self.output_dir, "sample_grid.png")
         plt.savefig(output_path)
         plt.close()
-        self.log(f"✅ [Step 2 Complete] Sample image grid saved as '{output_path}'\n")
+        self.log(f"✅ [Step 3 Complete] Sample image grid saved as '{output_path}'\n")
 
-    def intensity_histograms(self, sample_size: int = 1000) -> None:
+    def step_4_intensity_histograms(self, sample_size: int = 1000) -> None:
         """Plots histograms of pixel intensity values for clean and distorted images."""
-        self.log("\n📈 [Step 3] Generating pixel intensity histograms...")
+        self.log("\n📈 [Step 4] Generating pixel intensity histograms...")
 
         clean_pixels, distorted_pixels = [], []
         total_images = sum(
@@ -122,11 +210,11 @@ class DigitDatasetEvaluator:
             plt.close()
             pbar.update(1)
 
-        self.log(f"✅ [Step 3 Complete] Histogram saved as '{output_path}'\n")
+        self.log(f"✅ [Step 4 Complete] Histogram saved as '{output_path}'\n")
 
-    def detect_corrupt_images(self) -> List[str]:
+    def step_5_detect_corrupt_images(self) -> List[str]:
         """Detects images that are blank or nearly blank."""
-        self.log("\n🔍 [Step 4] Scanning for corrupt images...")
+        self.log("\n🔍 [Step 5] Scanning for corrupt images...")
         corrupt: List[str] = []
 
         for digit, path in self.digit_dirs.items():
@@ -140,18 +228,18 @@ class DigitDatasetEvaluator:
                     corrupt.append(img_path)
 
         if corrupt:
-            self.log(f"⚠️ Found {len(corrupt)} potentially corrupt images. Showing first 10:")
+            self.log(f"⚠️ [Step 5] Found {len(corrupt)} potentially corrupt images. Showing first 10:")
             for c in corrupt[:10]:
                 self.log(f"    - {c}")
         else:
-            self.log("✅ No corrupt images detected.")
+            self.log("✅ [Step 5] No corrupt images detected.")
 
-        self.log("✅ [Step 4 Complete] Corrupt image scan finished.\n")
+        self.log("✅ [Step 5 Complete] Corrupt image scan finished.\n")
         return corrupt
 
-    def digit_centering_heatmap(self, samples_per_digit: int = 100) -> None:
+    def step_6_digit_centering_heatmap(self, samples_per_digit: int = 100) -> None:
         """Creates a heatmap to visualize average digit centering across the dataset."""
-        self.log("\n🔥 [Step 5] Generating digit centering heatmap...")
+        self.log("\n🔥 [Step 6] Generating digit centering heatmap...")
 
         accumulator = np.zeros((self.image_size, self.image_size), dtype=np.float32)
         total = 0
@@ -178,11 +266,72 @@ class DigitDatasetEvaluator:
             output_path = os.path.join(self.output_dir, "centering_heatmap.png")
             plt.savefig(output_path)
             plt.close()
-            self.log(f"✅ [Step 5 Complete] Digit centering heatmap saved as '{output_path}'\n")
+            self.log(f"✅ [Step 6 Complete] Digit centering heatmap saved as '{output_path}'\n")
         else:
-            self.log("⚠️ No images found for centering heatmap.")
+            self.log("⚠️ [Step 6 Complete] No images found for centering heatmap.")
 
-    def detect_partial_digits(self, margin: int = 0, samples_per_digit: int = 10) -> List[str]:
+    def step_7_detect_blurry_images(self, threshold: float = 100.0) -> None:
+        """Detects blurry images using variance of Laplacian."""
+        self.log("\n🔍 [Step 7] Detecting blurry images...")
+
+        blurry_images = []
+        all_images = [(digit, os.path.join(path, img))
+                      for digit, path in self.digit_dirs.items()
+                      for img in os.listdir(path)]
+
+        with tqdm(total=len(all_images), desc="Checking for blur", ncols=100) as bar:
+            for digit, img_path in all_images:
+                img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+                if img is not None:
+                    lap_var = cv2.Laplacian(img, cv2.CV_64F).var()
+                    if lap_var < threshold:
+                        blurry_images.append((img_path, lap_var))
+                bar.update(1)
+
+        self.log(f"[Step 7] Found {len(blurry_images)} blurry images (Laplacian var < {threshold}).")
+        for img_path, score in blurry_images[:10]:
+            self.log(f" - {img_path} | Laplacian variance: {score:.2f}")
+
+        self.log("✅ [Step 7 Complete] Blurry image detection done.\n")
+
+    def step_8_estimate_dataset_diversity(self, sample_size: int = 200) -> None:
+        """Estimates dataset diversity via average perceptual hash distance."""
+        self.log("\n🌈 [Step 8] Estimating dataset diversity (phash distance)...")
+
+        all_paths = []
+        for digit, path in self.digit_dirs.items():
+            all_paths.extend([os.path.join(path, f) for f in os.listdir(path)])
+        sampled_paths = random.sample(all_paths, min(sample_size, len(all_paths)))
+
+        hashes = []
+        with tqdm(total=len(sampled_paths), desc="Computing image hashes", ncols=100) as bar:
+            for p in sampled_paths:
+                try:
+                    hashes.append(imagehash.phash(Image.open(p)))
+                except Exception:
+                    continue
+                bar.update(1)
+
+        distances = []
+        total_comparisons = len(hashes) * (len(hashes) - 1) // 2
+        with tqdm(total=total_comparisons, desc="Calculating hash distances", ncols=100) as bar:
+            for i in range(len(hashes)):
+                for j in range(i + 1, len(hashes)):
+                    distances.append(hashes[i] - hashes[j])
+                    bar.update(1)
+
+        if distances:
+            avg_dist = np.mean(distances)
+            std_dist = np.std(distances)
+            self.log(f"[Step 8] Average perceptual hash distance: {avg_dist:.2f} ± {std_dist:.2f}")
+            if avg_dist < 5:
+                self.log("⚠️ [Step 8] Low average hash distance — dataset may lack visual diversity.")
+        else:
+            self.log("[Step 8] Not enough valid images to estimate diversity.")
+
+        self.log("✅ [Step 8 Complete] Dataset diversity estimation done.\n")
+
+    def step_9_detect_partial_digits(self, margin: int = 0, samples_per_digit: int = 10) -> List[str]:
         """
         Detects images where digits touch the image frame (partial digits).
 
@@ -193,7 +342,7 @@ class DigitDatasetEvaluator:
         Returns:
             List[str]: List of paths of suspected partial digit images.
         """
-        self.log("\n🔍 [Step 6] Detecting partial digits (those touching the image frame)...")
+        self.log("\n🔍 [Step 9] Detecting partial digits (those touching the image frame)...")
 
         os.makedirs(self.output_dir, exist_ok=True)
         save_path = os.path.join(self.output_dir, "partial_digits_grid.png")
@@ -236,7 +385,7 @@ class DigitDatasetEvaluator:
         cols = samples_per_digit
         grid_img = np.ones((rows * self.image_size, cols * self.image_size), dtype=np.uint8) * 255
 
-        self.log("🖼️ [Step 6] Building composite image grid of partial digits...")
+        self.log("🖼️ [Step 9] Building composite image grid of partial digits...")
         for row_idx, digit in tqdm(enumerate(sorted(partials_by_digit.keys())), desc="Creating visualization",
                                    total=len(partials_by_digit)):
             selected = partials_by_digit[digit][:samples_per_digit]
@@ -251,8 +400,8 @@ class DigitDatasetEvaluator:
                     grid_img[y1:y2, x1:x2] = img_resized
 
         cv2.imwrite(save_path, grid_img)
-        self.log(f"✅ [Step 6 Complete] Composite image of partial digits saved as '{save_path}'")
-        self.log(f"🟠 [Step 6 Complete] Found {len(partials)} potentially partial digit images.\n")
+        self.log(f"🟠 [Step 9] Found {len(partials)} potentially partial digit images.")
+        self.log(f"✅ [Step 9 Complete] Composite image of partial digits saved as '{save_path}'\n")
 
         return partials
 
@@ -265,9 +414,9 @@ class DigitDatasetEvaluator:
         except Exception:
             return None
 
-    def detect_duplicate_images(self, hash_func=imagehash.phash, threshold: int = 0,
-                                max_groups: int = 5, samples_per_group: int = 5) -> np.ndarray:
-        self.log("\n🔍 [Step 7] Detecting duplicate or near-duplicate images within each digit class...")
+    def step_10_detect_duplicate_images(self, hash_func=imagehash.phash, threshold: int = 0,
+                                        max_groups: int = 5, samples_per_group: int = 5) -> np.ndarray:
+        self.log("\n🔍 [Step 10] Detecting duplicate or near-duplicate images within each digit class...")
 
         all_images: List[Tuple[imagehash.ImageHash, str, str]] = []
 
@@ -351,7 +500,7 @@ class DigitDatasetEvaluator:
 
         save_path = os.path.join(self.output_dir, "duplicate_images_grid.png")
         cv2.imwrite(save_path, final_image)
-        self.log(f"✅ [Step 7 Complete] Saved composite image of duplicate digits → {save_path}\n")
+        self.log(f"✅ [Step 10 Complete] Saved composite image of duplicate digits → {save_path}\n")
 
         return final_image
 
@@ -377,7 +526,7 @@ class DigitDatasetEvaluator:
             rows.append(cv2.hconcat(row_imgs))
         return cv2.vconcat(rows)
 
-    def local_feature_consistency(self, method: str = "sobel", samples_per_digit: int = 500) -> None:
+    def step_11_local_feature_consistency(self, method: str = "sobel", samples_per_digit: int = 500) -> None:
         """
         Analyzes local feature consistency across digits using either Sobel edges or ORB keypoints.
         All digit feature maps are combined into a single figure.
@@ -387,7 +536,7 @@ class DigitDatasetEvaluator:
             samples_per_digit (int): Number of samples to use per digit class.
         """
         assert method in ["sobel", "orb"], "Method must be 'sobel' or 'orb'"
-        self.log(f"\n🔍 [Step 8] Checking local feature consistency using '{method}' method...")
+        self.log(f"\n🔍 [Step 11] Checking local feature consistency using '{method}' method...")
 
         orb_detector = None
         if method == "orb":
@@ -452,15 +601,84 @@ class DigitDatasetEvaluator:
 
         pbar.close()
 
-        cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # Colorbar
-        fig.colorbar(im, cax=cbar_ax)
+        # Adjust layout to ensure proper space
+        plt.subplots_adjust(left=0.05, right=0.88, top=0.92, bottom=0.05, wspace=0.3, hspace=0.3)
 
-        save_path = os.path.join(self.output_dir, f"local_feature_consistency_{method}.png")
+        # Add colorbar on the right side
+        cbar_ax = fig.add_axes([0.9, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
+        fig.colorbar(im, cax=cbar_ax, label="Feature Intensity")
+
+        # Title and save figure
         plt.suptitle(f"Local Feature Consistency ({method.upper()})", fontsize=20)
+        save_path = os.path.join(self.output_dir, f"local_feature_consistency_{method}.png")
         plt.savefig(save_path, bbox_inches='tight')
         plt.close()
 
-        self.log(f"✅ [Step 8 Complete] Combined local feature map saved: {save_path}\n")
+        self.log(f"✅ [Step 11 Complete] Combined local feature map saved: {save_path}\n")
+
+    def step_12_digit_heatmap_grid(self) -> None:
+        """Generates a heatmap for each digit (1–9) and plots them in a single composite 3×3 grid."""
+        self.log("\n🔥 [Step 12] Generating per-digit heatmap grid (1–9)...")
+
+        fig, axes = plt.subplots(3, 3, figsize=(10, 10))
+        fig.suptitle("Digit Heatmaps (1–9)", fontsize=16)
+
+        digits = list(map(str, range(1, 10)))
+        with tqdm(total=len(digits), desc="Building heatmaps", ncols=100) as bar:
+            for i, digit in enumerate(digits):
+                row, col = divmod(i, 3)
+                ax = axes[row, col]
+
+                path = self.digit_dirs.get(digit)
+                if not path or not os.path.exists(path):
+                    ax.set_title(f"Digit {digit} (missing)")
+                    ax.axis("off")
+                    bar.update(1)
+                    continue
+
+                image_paths = [os.path.join(path, f) for f in os.listdir(path)
+                               if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+                if not image_paths:
+                    ax.set_title(f"Digit {digit} (empty)")
+                    ax.axis("off")
+                    bar.update(1)
+                    continue
+
+                try:
+                    acc = None
+                    for p in image_paths:
+                        img = cv2.imread(p, cv2.IMREAD_GRAYSCALE)
+                        if img is None:
+                            continue
+                        img = img.astype(np.float32) / 255.0
+                        if acc is None:
+                            acc = np.zeros_like(img)
+                        acc += img
+                    heatmap = acc / len(image_paths)
+
+                    reference_im = ax.imshow(heatmap, cmap='hot', interpolation='nearest')
+                    ax.set_title(f"Digit {digit}")
+                    ax.axis("off")
+                except Exception as e:
+                    self.log(f"❌ [Step 12] Failed for digit {digit}: {e}")
+                    ax.axis("off")
+
+                bar.update(1)
+
+        # Manually adjust the layout to avoid tight_layout issues
+        plt.subplots_adjust(left=0.05, right=0.88, top=0.92, bottom=0.05, wspace=0.3, hspace=0.3)
+
+        # Add colorbar on the right side
+        cbar_ax = fig.add_axes([0.9, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
+        fig.colorbar(reference_im, cax=cbar_ax, label="Normalized Intensity")
+
+        # Save the figure
+        output_path = os.path.join(self.output_dir, "digit_heatmap_grid.png")
+        plt.savefig(output_path)
+        plt.close()
+
+        self.log(f"🖼️ [Step 12] Saved heatmap grid → {output_path}")
+        self.log("✅ [Step 12 Complete] Digit heatmap grid generated.\n")
 
     def run_full_evaluation(self) -> None:
         """Runs a full evaluation pipeline and generates report artifacts."""
@@ -468,15 +686,18 @@ class DigitDatasetEvaluator:
         self.log(f"Dataset path: {self.dataset_path}")
         self.log(f"Evaluation time: {datetime.datetime.now()}\n")
 
-        self.class_distribution()
-        self.visualize_sample_grid()
-        self.intensity_histograms()
-        self.detect_corrupt_images()
-        self.digit_centering_heatmap()
-        self.detect_partial_digits()
-        self.detect_duplicate_images()
-        self.local_feature_consistency(method="sobel")
-        self.local_feature_consistency(method="orb")
+        self.step_1_class_distribution()
+        self.step_2_check_image_dimensions()
+        self.step_3_visualize_sample_grid()
+        self.step_4_intensity_histograms()
+        self.step_5_detect_corrupt_images()
+        self.step_6_digit_centering_heatmap()
+        self.step_7_detect_blurry_images()
+        self.step_8_estimate_dataset_diversity()
+        self.step_9_detect_partial_digits()
+        self.step_10_detect_duplicate_images()
+        self.step_11_local_feature_consistency(method="sobel")
+        self.step_11_local_feature_consistency(method="orb")
 
         report_path = os.path.join(self.output_dir, "dataset_evaluation_report.txt")
         with open(report_path, "w", encoding="utf-8") as f:
@@ -486,5 +707,5 @@ class DigitDatasetEvaluator:
 
 if __name__ == "__main__":
     evaluator = DigitDatasetEvaluator(dataset_path="digit_dataset")
-    evaluator.run_full_evaluation()
-    # evaluator.detect_partial_digits()
+    # evaluator.run_full_evaluation()
+    evaluator.step_11_local_feature_consistency()
