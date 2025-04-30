@@ -100,7 +100,6 @@ class DigitDatasetEvaluator:
 
         for digit, path in self.digit_dirs.items():
             if not os.path.exists(path):
-                self.log(f"   ⛔ Skipping missing directory: {path}")
                 continue
 
             images = os.listdir(path)
@@ -112,7 +111,6 @@ class DigitDatasetEvaluator:
                 "clean": clean,
                 "distorted": distorted
             }
-            self.log(f"   - Digit {digit}: {summary[digit]}")
 
         # 📊 Generate grouped bar chart
         digits = sorted(summary.keys(), key=int)
@@ -991,6 +989,8 @@ class DigitDatasetEvaluator:
         Returns:
             pd.DataFrame: The DataFrame containing the summary table.
         """
+        self.log("📋 Generating Table 1: Dataset Summary...")
+
         summary_rows = []
         total_all = clean_all = distorted_all = other_all = 0
 
@@ -1068,10 +1068,9 @@ class DigitDatasetEvaluator:
         plt.close()
 
         # Log
-        self.report_lines.append("📋 Table 1. Dataset Summary\n")
-        self.report_lines.append(f"🖼️ Image Size: {image_size}")
-        self.report_lines.append(f"📝 Saved CSV → {csv_path}")
-        self.report_lines.append(f"🖼️ Saved Image → {image_path}\n")
+        self.log(f"📄 Saved CSV → {csv_path}")
+        self.log(f"📋 Saved table image → {image_path}")
+        self.log("✅ [Table 1] Dataset Summary... generated successfully.\n")
 
         return df
 
@@ -1140,7 +1139,6 @@ class DigitDatasetEvaluator:
         # Save CSV
         csv_path = os.path.join(self.output_dir, "table_2_image_quality_issues.csv")
         df.to_csv(csv_path, index=False)
-        self.log(f"📄 Saved Table 2 CSV → {csv_path}")
 
         # Save table as image with a compact layout
         fig, ax = plt.subplots(figsize=(8, 0.1 * len(df) + 1.5))  # Keep the size reasonable
@@ -1172,10 +1170,10 @@ class DigitDatasetEvaluator:
         plt.savefig(image_path, bbox_inches="tight", dpi=150, pad_inches=0.05)
         plt.close()
 
-        self.log(f"🖼️ Saved compact Table 2 image → {image_path}")
-
-        # Add header to report lines (not full table to avoid clutter)
-        self.report_lines.append("📋 Table 2. Image Quality Issues Summary\n")
+        # Log
+        self.log(f"📄 Saved CSV → {csv_path}")
+        self.log(f"📋 Saved table image → {image_path}")
+        self.log("✅ [Table 2] Image Quality Issues Summary generated successfully.\n")
 
     def generate_table_3_duplicate_summary(self, all_duplicates_by_digit: Dict[str, List[List[str]]]) -> None:
         """
@@ -1212,7 +1210,6 @@ class DigitDatasetEvaluator:
         # Save CSV
         csv_path = os.path.join(self.output_dir, "table_3_duplicate_summary.csv")
         df.to_csv(csv_path, index=False)
-        self.log(f"📄 Saved Table 3 CSV → {csv_path}")
 
         # Save table as image with compact layout
         fig, ax = plt.subplots(figsize=(8, 0.1 * len(df) + 1.5))
@@ -1240,7 +1237,10 @@ class DigitDatasetEvaluator:
         plt.savefig(image_path, bbox_inches="tight", dpi=150, pad_inches=0.05)
         plt.close()
 
-        self.report_lines.append("📋 Table 3. Duplicate Image Summary\n")
+        # Logs
+        self.log(f"📄 Saved CSV → {csv_path}")
+        self.log(f"📋 Saved table image → {image_path}")
+        self.log("✅ [Table 3] Duplicate Image Summary generated successfully.\n")
 
     def generate_table_4_dataset_diversity(self, diversity_data: List[Dict[str, Union[str, float, int]]]) -> None:
         """
@@ -1252,7 +1252,7 @@ class DigitDatasetEvaluator:
         Returns:
             None: Saves a CSV file and table image, and appends a table header to self.report_lines.
         """
-        self.log("📊 Generating Table 4: Dataset Diversity...")
+        self.log("📋 Generating Table 4: Dataset Diversity...")
 
         # Build DataFrame
         df = pd.DataFrame(diversity_data)
@@ -1266,7 +1266,6 @@ class DigitDatasetEvaluator:
         # Save as CSV
         csv_path = os.path.join(self.output_dir, "table_4_dataset_diversity.csv")
         df.to_csv(csv_path, index=False)
-        self.log(f"📄 Saved Table 4 CSV → {csv_path}")
 
         # Save as styled image with separate summary text
         fig_height = 0.1 * len(df) + 2.5
@@ -1300,8 +1299,9 @@ class DigitDatasetEvaluator:
         plt.savefig(image_path, bbox_inches="tight", dpi=150, pad_inches=0.05)
         plt.close()
 
-        self.report_lines.append("📊 Table 4. Dataset Diversity\n")
-        self.log("✅ [Table 4] Dataset Diversity generated successfully.")
+        self.log(f"📄 Saved CSV → {csv_path}")
+        self.log(f"📋 Saved table image → {image_path}")
+        self.log("✅ [Table 4] Dataset Diversity generated successfully.\n")
 
     def generate_table_5_feature_consistency(self, sobel_data: List[Dict[str, Union[str, float, int]]],
                                              orb_data: List[Dict[str, Union[str, float, int]]]) -> None:
@@ -1315,7 +1315,7 @@ class DigitDatasetEvaluator:
         Returns:
             None: Saves a CSV file and table image, and appends a table header to self.report_lines.
         """
-        self.log("📊 Generating Table 5: Feature Consistency...")
+        self.log("📋 Generating Table 5: Feature Consistency (Sobel & ORB)...")
 
         # Merge Sobel and ORB data based on 'Digit'
         feature_data = []
@@ -1364,7 +1364,6 @@ class DigitDatasetEvaluator:
         # Save as CSV
         csv_path = os.path.join(self.output_dir, "table_5_feature_consistency.csv")
         df.to_csv(csv_path, index=False)
-        self.log(f"📄 Saved Table 5 CSV → {csv_path}")
 
         # Save as styled image
         fig, ax = plt.subplots(figsize=(8, 0.1 * len(df) + 1.5))
@@ -1392,8 +1391,9 @@ class DigitDatasetEvaluator:
         plt.savefig(image_path, bbox_inches="tight", dpi=150, pad_inches=0.05)
         plt.close()
 
-        self.report_lines.append("📊 Table 5. Feature Consistency (Sobel & ORB)\n")
-        self.log("✅ [Table 5] Feature Consistency generated successfully.")
+        self.log(f"📄 Saved CSV → {csv_path}")
+        self.log(f"📋 Saved table image → {image_path}")
+        self.log("✅ [Table 5] Feature Consistency (Sobel & ORB) generated successfully.\n")
 
     def run_full_evaluation(self) -> None:
         """
@@ -1437,7 +1437,7 @@ class DigitDatasetEvaluator:
         diversity_data = self.step_8_estimate_dataset_diversity()
         partial_paths = self.step_9_detect_partial_digits()
         _, all_duplicates_by_digit = self.step_10_detect_duplicate_images()
-        sobel_data, orb_data = self.step_11_local_feature_consistency(samples_per_digit=100)
+        sobel_data, orb_data = self.step_11_local_feature_consistency(samples_per_digit=10000)
         self.step_12_digit_heatmap_grid()
 
         # Table/report generation
@@ -1457,5 +1457,5 @@ class DigitDatasetEvaluator:
 
 if __name__ == "__main__":
     evaluator = DigitDatasetEvaluator(dataset_path="digit_dataset")
-    # evaluator.run_full_evaluation()
-    evaluator.step_11_local_feature_consistency()
+    evaluator.run_full_evaluation()
+    # evaluator.step_11_local_feature_consistency()
