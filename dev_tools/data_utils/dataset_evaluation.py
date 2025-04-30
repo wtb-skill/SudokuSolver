@@ -1,5 +1,6 @@
 import os
 import cv2
+import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from collections import defaultdict
@@ -10,6 +11,7 @@ import imagehash
 from PIL import Image
 import concurrent.futures
 from tqdm import tqdm
+from typing import List, Dict, Union
 
 
 class DigitDatasetEvaluator:
@@ -41,80 +43,134 @@ class DigitDatasetEvaluator:
         os.makedirs(output_dir, exist_ok=True)
         self.report_lines: List[str] = []
 
+        # Visual constants
+        self.plot_params = {
+            "figsize": (10, 10),            # Default figure size for histograms
+            "font_size": 14,               # Font size for titles and labels
+            "bar_color": 'skyblue',        # Default color for bars in histograms
+            "bar_edgecolor": 'black',      # Bar edge color for histograms
+            "color_map": 'hot',            # Default colormap for heatmaps
+            "clean_color": "green",
+            "distorted_color": "red",
+            "grid_color": '#cccccc',       # Grid line color in plots
+            "legend_font_size": 12,        # Font size for legend
+            "legend_loc": 'best'           # Location of the legend in plots
+        }
+
     def log(self, text: str) -> None:
         """Logs messages to console and saves to the evaluation report."""
         print(text)
         self.report_lines.append(text)
 
+    def get_plot_params(self) -> dict:
+        """Returns the plot parameters for consistent visualization."""
+        return self.plot_params
+
+    def set_plot_params(self, figsize: tuple = None, font_size: int = None,
+                        bar_color: str = None, color_map: str = None,
+                        grid_color: str = None, legend_font_size: int = None,
+                        legend_loc: str = None) -> None:
+        """Set custom plot parameters."""
+        if figsize: self.plot_params["figsize"] = figsize
+        if font_size: self.plot_params["font_size"] = font_size
+        if bar_color: self.plot_params["bar_color"] = bar_color
+        if color_map: self.plot_params["color_map"] = color_map
+        if grid_color: self.plot_params["grid_color"] = grid_color
+        if legend_font_size: self.plot_params["legend_font_size"] = legend_font_size
+        if legend_loc: self.plot_params["legend_loc"] = legend_loc
+
     def step_1_class_distribution(self) -> Dict[str, Dict[str, int]]:
-        """Analyzes class distribution, imbalance, and generates histogram."""
-        self.log("\n📊 [Step 1] Starting class distribution & balance analysis...")
+        """
+        Analyzes and logs the distribution of clean vs distorted images per digit class.
+
+        This step:
+          - Counts total, clean, and distorted images for each digit (1–9).
+          - Saves a grouped bar chart comparing these counts across digits.
+          - Logs the results and returns a summary dictionary.
+
+        Returns:
+            Dict[str, Dict[str, int]]: A nested dictionary where keys are digit strings ('1'–'9'),
+            and values are dictionaries containing counts for 'total', 'clean', and 'distorted' images.
+        """
+        self.log("\n📊 [Step 1] Starting class distribution analysis...")
         summary: Dict[str, Dict[str, int]] = {}
+
+        # Retrieve the plot parameters (font size, colors, etc.)
+        plot_params = self.get_plot_params()
 
         for digit, path in self.digit_dirs.items():
             if not os.path.exists(path):
                 self.log(f"   ⛔ Skipping missing directory: {path}")
                 continue
+
             images = os.listdir(path)
             clean = len([img for img in images if "clean" in img])
             distorted = len(images) - clean
-            summary[digit] = {"total": len(images), "clean": clean, "distorted": distorted}
+
+            summary[digit] = {
+                "total": len(images),
+                "clean": clean,
+                "distorted": distorted
+            }
             self.log(f"   - Digit {digit}: {summary[digit]}")
 
-        # ⚖️ Class imbalance calculation
-        class_totals = {d: summary[d]["total"] for d in summary}
-        min_class = min(class_totals, key=class_totals.get)
-        max_class = max(class_totals, key=class_totals.get)
-        imbalance_ratio = class_totals[max_class] / max(1, class_totals[min_class])
+        # 📊 Generate grouped bar chart
+        digits = sorted(summary.keys(), key=int)
+        totals = [summary[d]["total"] for d in digits]
+        cleans = [summary[d]["clean"] for d in digits]
+        distorteds = [summary[d]["distorted"] for d in digits]
 
-        self.log(f"[Step 1] Class sample counts: {class_totals}")
-        self.log(f"[Step 1] Imbalance ratio (max/min): {imbalance_ratio:.2f}")
-        if imbalance_ratio > 3:
-            self.log("⚠️ [Step 1] Warning: High class imbalance detected.")
+        x = range(len(digits))
+        width = 0.3
 
-        # 📊 Generate grouped histogram
-        try:
-            digits = sorted(summary.keys(), key=int)
-            totals = [summary[d]["total"] for d in digits]
-            cleans = [summary[d]["clean"] for d in digits]
-            distorteds = [summary[d]["distorted"] for d in digits]
+        plt.figure(figsize=plot_params["figsize"])
+        plt.bar([i - width for i in x], totals, width=width, label="Total", color="gray",
+                edgecolor=plot_params["bar_edgecolor"])
+        plt.bar(x, cleans, width=width, label="Clean", color=plot_params["bar_color"],
+                edgecolor=plot_params["bar_edgecolor"])
+        plt.bar([i + width for i in x], distorteds, width=width, label="Distorted", color="red",
+                edgecolor=plot_params["bar_edgecolor"])
 
-            x = range(len(digits))
-            width = 0.3
+        plt.xlabel("Digit Class", fontsize=plot_params["font_size"])
+        plt.ylabel("Number of Images", fontsize=plot_params["font_size"])
+        plt.title("Image Distribution per Digit (Total / Clean / Distorted)", fontsize=plot_params["font_size"])
+        plt.xticks(x, digits, fontsize=plot_params["font_size"])
+        plt.legend(fontsize=plot_params["legend_font_size"], loc=plot_params["legend_loc"])
+        plt.tight_layout()
 
-            plt.figure(figsize=(10, 6))
-            plt.bar([i - width for i in x], totals, width=width, label="Total", color="skyblue")
-            plt.bar(x, cleans, width=width, label="Clean", color="green")
-            plt.bar([i + width for i in x], distorteds, width=width, label="Distorted", color="red")
+        save_path = os.path.join(self.output_dir, "class_distribution_histogram.png")
+        plt.savefig(save_path)
+        plt.close()
 
-            plt.xlabel("Digit Class")
-            plt.ylabel("Number of Images")
-            plt.title("Image Distribution per Digit (Total / Clean / Distorted)")
-            plt.xticks(x, digits)
-            plt.legend()
-            plt.tight_layout()
+        self.log(f"📊 [Step 1] Saved class distribution histogram → {save_path}")
+        self.log("✅ [Step 1 Complete] Class distribution analysis done.\n")
 
-            save_path = os.path.join(self.output_dir, "class_distribution_histogram.png")
-            plt.savefig(save_path)
-            plt.close()
-
-            self.log(f"📊 [Step 1] Saved class distribution histogram → {save_path}")
-        except Exception as e:
-            self.log(f"[Step 1] ❌ Failed to generate histogram: {e}")
-
-        self.log("✅ [Step 1 Complete] Class distribution & balance analysis done.\n")
         return summary
 
-    def step_2_check_image_dimensions(self) -> None:
-        """Check for inconsistent image dimensions across dataset."""
+    def step_2_check_image_dimensions(self) -> str:
+        """
+        Analyzes all images in the dataset to identify unique image dimensions and generates a histogram.
+
+        This step:
+          - Checks and counts each unique (height x width) image dimension.
+          - Logs the number of unique sizes and examples of each.
+          - Saves a histogram plot visualizing the distribution of image dimensions.
+
+        Returns:
+            str: A string summarizing image size information for reporting purposes.
+                 - If all images have the same dimensions, returns "HxW" (e.g., "32×32").
+                 - If multiple dimensions are found, returns "Mixed".
+        """
         self.log("\n📏 [Step 2] Checking image dimensions...")
 
-        dim_counter = defaultdict(int)
-        dim_examples = defaultdict(list)
+        dim_counter: Dict[Tuple[int, int], int] = defaultdict(int)
+        dim_examples: Dict[Tuple[int, int], List[str]] = defaultdict(list)
 
-        all_images = [(digit, os.path.join(path, img))
-                      for digit, path in self.digit_dirs.items()
-                      for img in os.listdir(path)]
+        all_images: List[Tuple[str, str]] = [
+            (digit, os.path.join(path, img))
+            for digit, path in self.digit_dirs.items()
+            for img in os.listdir(path)
+        ]
 
         with tqdm(total=len(all_images), desc="Analyzing image sizes", ncols=100) as bar:
             for digit, img_path in all_images:
@@ -133,50 +189,95 @@ class DigitDatasetEvaluator:
         for dim, count in sorted(dim_counter.items(), key=lambda x: -x[1]):
             self.log(f"[Step 2] Size {dim}: {count} images. Examples: {dim_examples[dim]}")
 
-        # 📊 Generate histogram
-        labels = [f"{h}x{w}" for (h, w) in dim_counter.keys()]
-        counts = list(dim_counter.values())
+        plot_params = self.get_plot_params()
+        labels: List[str] = [f"{h}x{w}" for (h, w) in dim_counter.keys()]
+        counts: List[int] = list(dim_counter.values())
 
-        plt.figure(figsize=(10, 6))
-        plt.bar(labels, counts, color='skyblue', edgecolor='black')
-        plt.title("Image Dimension Distribution")
-        plt.xlabel("Dimensions (HxW)")
-        plt.ylabel("Number of Images")
-        plt.xticks(rotation=45, ha='right')
+        plt.figure(figsize=plot_params["figsize"])
+        plt.bar(labels, counts, color=plot_params["bar_color"], edgecolor=plot_params["bar_edgecolor"])
+        plt.title("Image Dimension Distribution", fontsize=plot_params["font_size"])
+        plt.xlabel("Dimensions (HxW)", fontsize=plot_params["font_size"])
+        plt.ylabel("Number of Images", fontsize=plot_params["font_size"])
+        plt.xticks(rotation=45, ha='right', fontsize=plot_params["font_size"])
         plt.tight_layout()
 
-        save_path = os.path.join(self.output_dir, "image_dimension_histogram.png")
+        save_path: str = os.path.join(self.output_dir, "image_dimension_histogram.png")
         plt.savefig(save_path)
         plt.close()
 
         self.log(f"📊 [Step 2] Saved image dimension histogram → {save_path}")
         self.log("✅ [Step 2 Complete] Image dimension check done.\n")
 
-    def step_3_visualize_sample_grid(self, samples_per_digit: int = 5) -> None:
-        """Saves a grid visualization of random samples for each digit."""
+        if len(dim_counter) == 1:
+            (h, w), _ = next(iter(dim_counter.items()))
+            return f"{h}×{w}"
+        else:
+            return "Mixed"
+
+    def step_3_visualize_sample_grid(self, samples_per_digit: int = 10) -> None:
+        """
+        Saves a grid visualization of random samples for each digit.
+
+        This step:
+          - Randomly selects a specified number of images from each digit class.
+          - Displays them in a grid format, with one row per digit (1-9).
+          - Adds a title and saves the resulting image to a file.
+
+        Args:
+            samples_per_digit (int): The number of sample images to display per digit class. Default is 5.
+
+        Returns:
+            None
+        """
         self.log("\n🖼️ [Step 3] Generating sample grid visualization...")
 
+        # Get visual parameters from the class (e.g., fontsize, figsize, etc.)
+        plot_params = self.get_plot_params()
+
+        # Create a subplot grid for 9 rows (for digits 1-9) and the specified number of samples per digit
         fig, axs = plt.subplots(9, samples_per_digit, figsize=(samples_per_digit * 1.5, 13))
+
+        # Iterate through each digit (1-9)
         for row, digit in enumerate(self.digit_dirs):
-            imgs = os.listdir(self.digit_dirs[digit])
-            samples = random.sample(imgs, min(samples_per_digit, len(imgs)))
+            imgs = os.listdir(self.digit_dirs[digit])  # Get images for the current digit
+            samples = random.sample(imgs, min(samples_per_digit, len(imgs)))  # Randomly sample images
+
             for col, img_name in enumerate(samples):
                 img_path = os.path.join(self.digit_dirs[digit], img_name)
-                img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
-                axs[row, col].imshow(img, cmap='gray')
-                axs[row, col].axis("off")
-                if col == 0:
-                    axs[row, col].set_title(f"Digit {digit}")
+                img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)  # Read image in grayscale
+                axs[row, col].imshow(img, cmap='gray')  # Display image in the grid
+                axs[row, col].axis("off")  # Hide axes
 
-        plt.tight_layout()
+        # Add a styled global title above the grid
+        fig.suptitle("Sample Images per Digit", fontsize=plot_params["font_size"])
+
+        # Adjust layout to leave space for the title, then save the output
+        plt.tight_layout(rect=[0, 0, 1, 0.97])  # Leave space for title
         output_path = os.path.join(self.output_dir, "sample_grid.png")
-        plt.savefig(output_path)
+        plt.savefig(output_path, bbox_inches="tight")  # Save the image
         plt.close()
+
         self.log(f"✅ [Step 3 Complete] Sample image grid saved as '{output_path}'\n")
 
     def step_4_intensity_histograms(self, sample_size: int = 1000) -> None:
-        """Plots histograms of pixel intensity values for clean and distorted images."""
+        """
+        Plots histograms of pixel intensity values for clean and distorted images.
+
+        This step:
+          - Loads a sample of images from each digit class.
+          - Separates the pixels into clean and distorted categories based on the image filenames.
+          - Plots the pixel intensity distributions for clean and distorted images and saves the plot.
+
+        Args:
+            sample_size (int): The number of images to sample from each digit class for the histogram. Default is 1000.
+
+        Returns:
+            None
+        """
         self.log("\n📈 [Step 4] Generating pixel intensity histograms...")
+
+        # Get visual parameters from the class (e.g., font size, color, etc.)
+        plot_params = self.get_plot_params()
 
         clean_pixels, distorted_pixels = [], []
         total_images = sum(
@@ -185,6 +286,7 @@ class DigitDatasetEvaluator:
             if os.path.exists(path)
         )
 
+        # Load and process images
         with tqdm(total=total_images, desc="🔍 Loading images", unit="img") as pbar:
             for digit, path in self.digit_dirs.items():
                 if not os.path.exists(path):
@@ -195,17 +297,25 @@ class DigitDatasetEvaluator:
                     full_path = os.path.join(path, img_name)
                     img = cv2.imread(full_path, cv2.IMREAD_GRAYSCALE)
                     if img is not None:
-                        (clean_pixels if "clean" in img_name else distorted_pixels).extend(img.flatten())
+                        if "clean" in img_name:
+                            clean_pixels.extend(img.flatten())
+                        else:
+                            distorted_pixels.extend(img.flatten())
                     pbar.update(1)
 
+        # Plot histograms for clean and distorted images
         with tqdm(total=1, desc="📊 Plotting & Saving", unit="task") as pbar:
-            plt.hist(clean_pixels, bins=50, alpha=0.6, label="Clean", color="green")
-            plt.hist(distorted_pixels, bins=50, alpha=0.6, label="Distorted", color="red")
-            plt.title("Pixel Intensity Histogram")
-            plt.xlabel("Pixel Value")
-            plt.ylabel("Frequency")
-            plt.legend()
+            plt.figure(figsize=(plot_params["figsize"][0], plot_params["figsize"][1]))
+            plt.hist(clean_pixels, bins=50, alpha=0.6, label="Clean", color=plot_params["clean_color"])
+            plt.hist(distorted_pixels, bins=50, alpha=0.6, label="Distorted", color=plot_params["distorted_color"])
+
+            plt.title("Pixel Intensity Histogram", fontsize=plot_params["font_size"])
+            plt.xlabel("Pixel Value", fontsize=plot_params["font_size"])
+            plt.ylabel("Frequency", fontsize=plot_params["font_size"])
+            plt.legend(fontsize=plot_params["font_size"])
+
             output_path = os.path.join(self.output_dir, "pixel_histogram.png")
+            plt.tight_layout()
             plt.savefig(output_path)
             plt.close()
             pbar.update(1)
@@ -213,20 +323,39 @@ class DigitDatasetEvaluator:
         self.log(f"✅ [Step 4 Complete] Histogram saved as '{output_path}'\n")
 
     def step_5_detect_corrupt_images(self) -> List[str]:
-        """Detects images that are blank or nearly blank."""
+        """
+        Detects images that are blank or nearly blank by checking if the pixel intensity range is too small.
+
+        This step:
+          - Scans each image in the dataset.
+          - Detects images that are corrupt (i.e., images that are entirely blank or nearly blank).
+          - Returns a list of potentially corrupt image paths.
+
+        Args:
+            None
+
+        Returns:
+            List[str]: A list of paths to images that are detected as corrupt.
+        """
         self.log("\n🔍 [Step 5] Scanning for corrupt images...")
+
         corrupt: List[str] = []
+        total_images = sum(len(os.listdir(path)) for path in self.digit_dirs.values())
 
-        for digit, path in self.digit_dirs.items():
-            if not os.path.exists(path):
-                self.log(f"   ⛔ Directory missing: {path}")
-                continue
-            for img_name in os.listdir(path):
-                img_path = os.path.join(path, img_name)
-                img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
-                if img is None or img.max() - img.min() < 10:
-                    corrupt.append(img_path)
+        # Scan images for corruption
+        with tqdm(total=total_images, desc="Scanning images", unit="img", ncols=100) as pbar:
+            for digit, path in self.digit_dirs.items():
+                if not os.path.exists(path):
+                    self.log(f"   ⛔ Directory missing: {path}")
+                    continue
+                for img_name in os.listdir(path):
+                    img_path = os.path.join(path, img_name)
+                    img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+                    if img is None or img.max() - img.min() < 10:  # Detect blank or nearly blank images
+                        corrupt.append(img_path)
+                    pbar.update(1)
 
+        # Log potential corrupt images
         if corrupt:
             self.log(f"⚠️ [Step 5] Found {len(corrupt)} potentially corrupt images. Showing first 10:")
             for c in corrupt[:10]:
@@ -238,43 +367,86 @@ class DigitDatasetEvaluator:
         return corrupt
 
     def step_6_digit_centering_heatmap(self, samples_per_digit: int = 100) -> None:
-        """Creates a heatmap to visualize average digit centering across the dataset."""
+        """
+        Creates a heatmap to visualize the average centering of digits across the dataset.
+
+        This step:
+          - Accumulates image data and averages it to visualize how centered the digits are.
+          - Creates a heatmap that shows the normalized pixel intensity, which represents the centering of the digits.
+          - Saves the resulting heatmap as an image.
+
+        Args:
+            samples_per_digit (int): The number of samples to use per digit to compute the centering heatmap. Default is 100.
+
+        Returns:
+            None
+        """
         self.log("\n🔥 [Step 6] Generating digit centering heatmap...")
 
         accumulator = np.zeros((self.image_size, self.image_size), dtype=np.float32)
         total = 0
 
-        for digit, path in self.digit_dirs.items():
-            if not os.path.exists(path):
-                self.log(f"   ⛔ Skipping missing directory: {path}")
-                continue
-            images = os.listdir(path)
-            random.shuffle(images)
-            for img_name in images[:samples_per_digit]:
-                img_path = os.path.join(path, img_name)
-                img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
-                if img is not None:
-                    norm_img = img.astype(np.float32) / 255.0
-                    accumulator += norm_img
-                    total += 1
+        # Calculate the total number of images for progress tracking
+        total_images = sum(min(samples_per_digit, len(os.listdir(path)))
+                           for path in self.digit_dirs.values() if os.path.exists(path))
+
+        with tqdm(total=total_images, desc="Processing images", unit="img", ncols=100) as pbar:
+            for digit, path in self.digit_dirs.items():
+                if not os.path.exists(path):
+                    self.log(f"   ⛔ Skipping missing directory: {path}")
+                    continue
+                images = os.listdir(path)
+                random.shuffle(images)
+                for img_name in images[:samples_per_digit]:
+                    img_path = os.path.join(path, img_name)
+                    img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+                    if img is not None:
+                        norm_img = img.astype(np.float32) / 255.0  # Normalize the image
+                        accumulator += norm_img
+                        total += 1
+                    pbar.update(1)
 
         if total > 0:
-            accumulator /= total
-            plt.imshow(accumulator, cmap="hot")
-            plt.colorbar()
-            plt.title("Digit Centering Heatmap (all digits)")
+            accumulator /= total  # Average the accumulated images
+
+            # Get visualization parameters
+            plot_params = self.get_plot_params()
+
+            # Use the fixed figsize from plot_params
+            plt.figure(figsize=plot_params["figsize"])
+
+            # Generate heatmap
+            plt.imshow(accumulator, cmap=plot_params["color_map"], interpolation="nearest")
+            plt.colorbar(label="Normalized Intensity")
+            plt.title("Digit Centering Heatmap (all digits)", fontsize=plot_params["font_size"])
+
+            # Save plot
             output_path = os.path.join(self.output_dir, "centering_heatmap.png")
-            plt.savefig(output_path)
+            plt.savefig(output_path, bbox_inches="tight")
             plt.close()
+
             self.log(f"✅ [Step 6 Complete] Digit centering heatmap saved as '{output_path}'\n")
         else:
             self.log("⚠️ [Step 6 Complete] No images found for centering heatmap.")
 
-    def step_7_detect_blurry_images(self, threshold: float = 100.0) -> None:
-        """Detects blurry images using variance of Laplacian."""
+    def step_7_detect_blurry_images(self, threshold: float = 100.0) -> List[Tuple[str, float]]:
+        """
+        Detects blurry images using the variance of the Laplacian method.
+
+        This step:
+          - Calculates the Laplacian variance for each image, which is a measure of image sharpness.
+          - Flags images with a Laplacian variance below the specified threshold as blurry.
+          - Logs the results and provides a list of detected blurry images.
+
+        Args:
+            threshold (float): The Laplacian variance threshold below which images will be considered blurry. Default is 100.0.
+
+        Returns:
+            List[Tuple[str, float]]: A list of tuples where each tuple contains the path to a blurry image and its Laplacian variance score.
+        """
         self.log("\n🔍 [Step 7] Detecting blurry images...")
 
-        blurry_images = []
+        blurry_images: List[Tuple[str, float]] = []
         all_images = [(digit, os.path.join(path, img))
                       for digit, path in self.digit_dirs.items()
                       for img in os.listdir(path)]
@@ -294,53 +466,72 @@ class DigitDatasetEvaluator:
 
         self.log("✅ [Step 7 Complete] Blurry image detection done.\n")
 
-    def step_8_estimate_dataset_diversity(self, sample_size: int = 200) -> None:
-        """Estimates dataset diversity via average perceptual hash distance."""
+        return blurry_images
+
+    def step_8_estimate_dataset_diversity(self) -> List[Dict[str, Union[str, float, int]]]:
+        """
+        Estimates dataset diversity per digit via the average perceptual hash (phash) distance between images.
+
+        Returns:
+            List[Dict[str, Any]]: Diversity score and number of unique samples per digit.
+        """
         self.log("\n🌈 [Step 8] Estimating dataset diversity (phash distance)...")
 
-        all_paths = []
-        for digit, path in self.digit_dirs.items():
-            all_paths.extend([os.path.join(path, f) for f in os.listdir(path)])
-        sampled_paths = random.sample(all_paths, min(sample_size, len(all_paths)))
+        digit_diversity_data = []
+        digit_dirs = sorted(self.digit_dirs.items(), key=lambda x: int(x[0]))
+        total_images = sum(len(os.listdir(path)) for _, path in digit_dirs)
 
-        hashes = []
-        with tqdm(total=len(sampled_paths), desc="Computing image hashes", ncols=100) as bar:
-            for p in sampled_paths:
-                try:
-                    hashes.append(imagehash.phash(Image.open(p)))
-                except Exception:
-                    continue
-                bar.update(1)
+        # Initialize total progress (hashing + pairwise comparisons for each digit)
+        total_tasks = total_images + sum(
+            len(os.listdir(path)) * (len(os.listdir(path)) - 1) // 2 for _, path in digit_dirs
+        )
 
-        distances = []
-        total_comparisons = len(hashes) * (len(hashes) - 1) // 2
-        with tqdm(total=total_comparisons, desc="Calculating hash distances", ncols=100) as bar:
-            for i in range(len(hashes)):
-                for j in range(i + 1, len(hashes)):
-                    distances.append(hashes[i] - hashes[j])
-                    bar.update(1)
+        with tqdm(total=total_tasks, desc="Overall Progress", ncols=100) as pbar:
+            for digit, path in digit_dirs:
+                image_paths = [os.path.join(path, f) for f in os.listdir(path)]
+                hashes = []
 
-        if distances:
-            avg_dist = np.mean(distances)
-            std_dist = np.std(distances)
-            self.log(f"[Step 8] Average perceptual hash distance: {avg_dist:.2f} ± {std_dist:.2f}")
-            if avg_dist < 5:
-                self.log("⚠️ [Step 8] Low average hash distance — dataset may lack visual diversity.")
-        else:
-            self.log("[Step 8] Not enough valid images to estimate diversity.")
+                for p in image_paths:
+                    try:
+                        hashes.append(imagehash.phash(Image.open(p)))
+                    except Exception:
+                        continue
+                    pbar.update(1)
 
-        self.log("✅ [Step 8 Complete] Dataset diversity estimation done.\n")
+                distances = []
+                for i in range(len(hashes)):
+                    for j in range(i + 1, len(hashes)):
+                        distances.append(hashes[i] - hashes[j])
+                        pbar.update(1)
+
+                avg_dist = np.mean(distances) if distances else 0
+                unique_hashes = len(set(str(h) for h in hashes))
+
+                digit_diversity_data.append({
+                    "Digit": digit,
+                    "Diversity Score": round(avg_dist, 2),
+                    "Unique Samples": unique_hashes
+                })
+
+            pbar.set_postfix({"Status": "Diversity Estimation Complete"})
+            self.log("✅ [Step 8 Complete] Dataset diversity estimation done.\n")
+
+        return digit_diversity_data
 
     def step_9_detect_partial_digits(self, margin: int = 0, samples_per_digit: int = 10) -> List[str]:
         """
         Detects images where digits touch the image frame (partial digits).
 
+        This step:
+          - Analyzes the bounding boxes of digits in each image.
+          - Flags images where the digit is close to or touches the image edges (within the specified margin).
+
         Args:
             margin (int): Margin in pixels to consider near-edge proximity. Defaults to 0.
-            samples_per_digit (int): Max number of flagged samples to display per digit.
+            samples_per_digit (int): Max number of flagged samples to display per digit. Default is 10.
 
         Returns:
-            List[str]: List of paths of suspected partial digit images.
+            List[str]: List of paths to suspected partial digit images.
         """
         self.log("\n🔍 [Step 9] Detecting partial digits (those touching the image frame)...")
 
@@ -351,7 +542,7 @@ class DigitDatasetEvaluator:
 
         # Calculate total images for progress bar
         total_images = sum(len(os.listdir(path)) for path in self.digit_dirs.values())
-        with tqdm(total=total_images, desc="Processing all digits") as pbar:
+        with tqdm(total=total_images, desc="Processing images", unit="img", ncols=100) as pbar:
             for digit, path in self.digit_dirs.items():
                 images = os.listdir(path)
                 for img_name in images:
@@ -377,7 +568,7 @@ class DigitDatasetEvaluator:
                     pbar.update(1)  # Update progress bar
 
         if not partials_by_digit:
-            self.log("✅ [Step 6 Complete] No partial digits detected based on edge proximity.")
+            self.log("✅ [Step 9 Complete] No partial digits detected based on edge proximity.")
             return []
 
         # Constructing visualization grid
@@ -386,7 +577,7 @@ class DigitDatasetEvaluator:
         grid_img = np.ones((rows * self.image_size, cols * self.image_size), dtype=np.uint8) * 255
 
         self.log("🖼️ [Step 9] Building composite image grid of partial digits...")
-        for row_idx, digit in tqdm(enumerate(sorted(partials_by_digit.keys())), desc="Creating visualization",
+        for row_idx, digit in tqdm(enumerate(sorted(partials_by_digit.keys())), desc="Creating grid",
                                    total=len(partials_by_digit)):
             selected = partials_by_digit[digit][:samples_per_digit]
             for col_idx, img_path in enumerate(selected):
@@ -399,7 +590,17 @@ class DigitDatasetEvaluator:
                     x2 = x1 + self.image_size
                     grid_img[y1:y2, x1:x2] = img_resized
 
-        cv2.imwrite(save_path, grid_img)
+        # Save grid image with a consistent and visually pleasing figsize
+        plot_params = self.get_plot_params()
+        fig, ax = plt.subplots(figsize=plot_params["figsize"])
+        ax.imshow(grid_img, cmap="gray")
+        ax.axis("off")
+        ax.set_title("Partial Digit Detection", fontsize=plot_params["font_size"])
+
+        plt.tight_layout()
+        plt.savefig(save_path, bbox_inches="tight")
+        plt.close()
+
         self.log(f"🟠 [Step 9] Found {len(partials)} potentially partial digit images.")
         self.log(f"✅ [Step 9 Complete] Composite image of partial digits saved as '{save_path}'\n")
 
@@ -416,6 +617,23 @@ class DigitDatasetEvaluator:
 
     def step_10_detect_duplicate_images(self, hash_func=imagehash.phash, threshold: int = 0,
                                         max_groups: int = 5, samples_per_group: int = 5) -> np.ndarray:
+        """
+        Detects duplicate or near-duplicate images within each digit class using perceptual hashing.
+
+        This step:
+          - Computes perceptual hashes for all images.
+          - Identifies duplicate or near-duplicate images based on a defined threshold.
+          - Groups duplicate images and visualizes them in a grid.
+
+        Args:
+            hash_func (Callable): The hash function to use for image hashing. Default is `imagehash.phash`.
+            threshold (int): The threshold for considering two images as duplicates. Default is 0.
+            max_groups (int): Maximum number of duplicate groups to visualize per digit. Default is 5.
+            samples_per_group (int): Number of duplicate images to show per group. Default is 5.
+
+        Returns:
+            np.ndarray: Final composite image of duplicate images.
+        """
         self.log("\n🔍 [Step 10] Detecting duplicate or near-duplicate images within each digit class...")
 
         all_images: List[Tuple[imagehash.ImageHash, str, str]] = []
@@ -459,11 +677,10 @@ class DigitDatasetEvaluator:
                     used.update(group)
                 find_bar.update(1)
 
-        # ✅ Force progress bar to 100% if it ended early
         if find_bar.n < find_bar.total:
             find_bar.update(find_bar.total - find_bar.n)
 
-        # 3. Visualize duplicates per digit
+        # 3. Visualize duplicate groups
         digit_visuals = {}
         all_duplicates_by_digit = defaultdict(list)
         for group in duplicates.values():
@@ -495,14 +712,43 @@ class DigitDatasetEvaluator:
                             continue
             digit_visuals[int(digit) - 1] = grid_img
 
-        # 4. Create final grid image
+        # 4. Create composite image grid
         final_image = self._concatenate_3x3_grid(digit_visuals)
 
-        save_path = os.path.join(self.output_dir, "duplicate_images_grid.png")
-        cv2.imwrite(save_path, final_image)
-        self.log(f"✅ [Step 10 Complete] Saved composite image of duplicate digits → {save_path}\n")
+        # 5. Save grid using matplotlib with styled title
+        grid_path = os.path.join(self.output_dir, "duplicate_images_grid.png")
+        plot_params = self.get_plot_params()
 
-        return final_image
+        fig, ax = plt.subplots(figsize=plot_params["figsize"])
+        ax.imshow(final_image, cmap="gray")
+        ax.axis("off")
+        ax.set_title("Duplicate Images Grid", fontsize=plot_params["font_size"])
+
+        plt.tight_layout()
+        plt.savefig(grid_path, bbox_inches="tight")
+        plt.close()
+
+        self.log(f"✅ [Step 10 Complete] Saved composite image of duplicate digits → {grid_path}")
+
+        # 6. Plot histogram of duplicate group counts per digit
+        duplicate_counts = [len(all_duplicates_by_digit.get(str(d), [])) for d in range(1, 10)]
+        plt.figure(figsize=plot_params["figsize"])
+        plt.bar(range(1, 10), duplicate_counts,
+                color=plot_params["bar_color"],
+                edgecolor=plot_params["bar_edgecolor"])
+        plt.title("Duplicate Groups Per Digit", fontsize=plot_params["font_size"])
+        plt.xlabel("Digit", fontsize=plot_params["font_size"])
+        plt.ylabel("Duplicate Groups", fontsize=plot_params["font_size"])
+        plt.grid(True, linestyle="--", color=plot_params["grid_color"])
+        plt.xticks(range(1, 10))
+        plt.tight_layout()
+
+        hist_path = os.path.join(self.output_dir, "duplicate_group_histogram.png")
+        plt.savefig(hist_path)
+        plt.close()
+        self.log(f"📊 Saved histogram of duplicate groups per digit → {hist_path}\n")
+
+        return final_image, all_duplicates_by_digit
 
     def _concatenate_3x3_grid(self, digit_visuals: Dict[int, np.ndarray]) -> np.ndarray:
         """
@@ -526,41 +772,46 @@ class DigitDatasetEvaluator:
             rows.append(cv2.hconcat(row_imgs))
         return cv2.vconcat(rows)
 
-    def step_11_local_feature_consistency(self, method: str = "sobel", samples_per_digit: int = 500) -> None:
+    def step_11_local_feature_consistency(self, samples_per_digit: int = 500) -> Tuple[
+        List[Dict[str, Union[str, float, int]]], List[Dict[str, Union[str, float, int]]]]:
         """
-        Analyzes local feature consistency across digits using either Sobel edges or ORB keypoints.
-        All digit feature maps are combined into a single figure.
+        Analyzes local feature consistency across digits using both Sobel edges and ORB keypoints.
+        Generates two separate 3x3 grid heatmaps (Sobel and ORB) and saves them as styled images.
+        Returns relevant data for Table 5: Feature Consistency.
 
         Args:
-            method (str): Feature extraction method, either "sobel" or "orb".
-            samples_per_digit (int): Number of samples to use per digit class.
-        """
-        assert method in ["sobel", "orb"], "Method must be 'sobel' or 'orb'"
-        self.log(f"\n🔍 [Step 11] Checking local feature consistency using '{method}' method...")
+            samples_per_digit (int): Number of samples to use per digit class. Default is 500.
 
-        orb_detector = None
-        if method == "orb":
-            orb_detector = cv2.ORB_create(
-                nfeatures=5000,  # more keypoints
-                edgeThreshold=5,  # less strict
-                fastThreshold=5  # detect weaker corners
-            )
+        Returns:
+            Tuple: Contains two lists of dictionaries with metrics for Sobel and ORB, respectively.
+        """
+        self.log(f"\n🔍 [Step 11] Checking local feature consistency using Sobel and ORB methods...")
+
+        orb_detector = cv2.ORB_create(nfeatures=5000, edgeThreshold=5, fastThreshold=5)
+        sobel_data = []
+        orb_data = []
 
         os.makedirs(self.output_dir, exist_ok=True)
-
-        fig, axes = plt.subplots(3, 3, figsize=(12, 12))
-        plt.subplots_adjust(hspace=0.4, wspace=0.4)
-
         total_images = samples_per_digit * len(self.digit_dirs)
         pbar = tqdm(total=total_images, desc="Processing images", ncols=100)
 
-        for idx, (digit, path) in enumerate(self.digit_dirs.items()):
+        # Setup 3x3 plot grids
+        sobel_fig, sobel_axes = plt.subplots(3, 3, figsize=self.plot_params["figsize"])
+        orb_fig, orb_axes = plt.subplots(3, 3, figsize=self.plot_params["figsize"])
+
+        plt.subplots_adjust(hspace=0.4, wspace=0.4)
+        final_imshow_sobel = None
+        final_imshow_orb = None
+
+        for idx, (digit, path) in enumerate(sorted(self.digit_dirs.items())):
             images = os.listdir(path)
             random.shuffle(images)
             selected = images[:samples_per_digit]
 
-            accumulator = np.zeros((self.image_size, self.image_size), dtype=np.float32)
-            count = 0
+            sobel_acc = np.zeros((self.image_size, self.image_size), dtype=np.float32)
+            orb_acc = np.zeros((self.image_size, self.image_size), dtype=np.float32)
+            sobel_count = 0
+            orb_count = 0
 
             for img_name in selected:
                 img_path = os.path.join(path, img_name)
@@ -569,61 +820,98 @@ class DigitDatasetEvaluator:
                     pbar.update(1)
                     continue
 
-                if method == "sobel":
-                    sobelx = cv2.Sobel(img, cv2.CV_64F, 1, 0, ksize=3)
-                    sobely = cv2.Sobel(img, cv2.CV_64F, 0, 1, ksize=3)
-                    magnitude = np.sqrt(sobelx ** 2 + sobely ** 2)
-                    norm_mag = cv2.normalize(magnitude, None, 0, 1, cv2.NORM_MINMAX)
-                    accumulator += norm_mag
+                # Sobel
+                sobelx = cv2.Sobel(img, cv2.CV_64F, 1, 0, ksize=3)
+                sobely = cv2.Sobel(img, cv2.CV_64F, 0, 1, ksize=3)
+                magnitude = np.sqrt(sobelx ** 2 + sobely ** 2)
+                norm_mag = cv2.normalize(magnitude, None, 0, 1, cv2.NORM_MINMAX)
+                sobel_acc += norm_mag
+                sobel_count += 1
 
-                elif method == "orb" and orb_detector is not None:
-                    keypoints = orb_detector.detect(img, None)
-                    kp_img = np.zeros_like(img, dtype=np.float32)
-                    for kp in keypoints:
-                        x, y = int(round(kp.pt[0])), int(round(kp.pt[1]))
-                        if 0 <= x < self.image_size and 0 <= y < self.image_size:
-                            kp_img[y, x] = 1.0
+                # ORB
+                keypoints = orb_detector.detect(img, None)
+                kp_img = np.zeros_like(img, dtype=np.float32)
+                for kp in keypoints:
+                    x, y = int(round(kp.pt[0])), int(round(kp.pt[1]))
+                    if 0 <= x < self.image_size and 0 <= y < self.image_size:
+                        kp_img[y, x] = 1.0
+                kp_img = cv2.GaussianBlur(kp_img, (5, 5), sigmaX=1, sigmaY=1)
+                orb_acc += kp_img
+                orb_count += 1
 
-                    kp_img = cv2.GaussianBlur(kp_img, (5, 5), sigmaX=1, sigmaY=1)
-                    accumulator += kp_img
+                pbar.update(1)
 
-                count += 1
-                pbar.update(1)  # ✅ update after every image
+            # Store average metrics
+            avg_sobel = np.sum(sobel_acc) / sobel_count if sobel_count else 0.0
+            avg_orb = np.sum(orb_acc) / orb_count if orb_count else 0.0
 
-            if count > 0:
-                vmin, vmax = np.percentile(accumulator, (1, 99))
-                ax = axes[idx // 3, idx % 3]
-                im = ax.imshow(accumulator, cmap="hot", vmin=vmin, vmax=vmax)
-                ax.set_title(f"Digit {digit}", fontsize=14)
-                ax.axis('off')
-            else:
-                self.log(f"⚠️ No images found for digit {digit} during local feature consistency check.")
+            sobel_data.append({"Digit": digit, "Avg Sobel Intensity": avg_sobel})
+            orb_data.append({"Digit": digit, "Avg ORB Keypoints": avg_orb})
+
+            # Display Sobel heatmap
+            if sobel_count > 0:
+                vmin, vmax = np.percentile(sobel_acc, (1, 99))
+                ax = sobel_axes[idx // 3, idx % 3]
+                final_imshow_sobel = ax.imshow(sobel_acc, cmap=self.plot_params["color_map"], vmin=vmin, vmax=vmax)
+                ax.set_title(f"Digit {digit} (Sobel)", fontsize=self.plot_params["font_size"])
+                ax.axis("off")
+
+            # Display ORB heatmap
+            if orb_count > 0:
+                vmin, vmax = np.percentile(orb_acc, (1, 99))
+                ax = orb_axes[idx // 3, idx % 3]
+                final_imshow_orb = ax.imshow(orb_acc, cmap=self.plot_params["color_map"], vmin=vmin, vmax=vmax)
+                ax.set_title(f"Digit {digit} (ORB)", fontsize=self.plot_params["font_size"])
+                ax.axis("off")
 
         pbar.close()
 
-        # Adjust layout to ensure proper space
-        plt.subplots_adjust(left=0.05, right=0.88, top=0.92, bottom=0.05, wspace=0.3, hspace=0.3)
+        # Format and save Sobel figure
+        if final_imshow_sobel is not None:
+            sobel_fig.subplots_adjust(left=0.05, right=0.88, top=0.92, bottom=0.05, wspace=0.3, hspace=0.3)
+            cbar_ax = sobel_fig.add_axes([0.9, 0.15, 0.02, 0.7])
+            sobel_fig.colorbar(final_imshow_sobel, cax=cbar_ax, label="Feature Intensity (Sobel)")
+            sobel_fig.suptitle("Local Feature Consistency (Sobel)", fontsize=self.plot_params["font_size"] + 4)
+            sobel_path = os.path.join(self.output_dir, "local_feature_consistency_sobel.png")
+            sobel_fig.savefig(sobel_path, bbox_inches="tight")
+            plt.close(sobel_fig)
 
-        # Add colorbar on the right side
-        cbar_ax = fig.add_axes([0.9, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
-        fig.colorbar(im, cax=cbar_ax, label="Feature Intensity")
+        # Format and save ORB figure
+        if final_imshow_orb is not None:
+            orb_fig.subplots_adjust(left=0.05, right=0.88, top=0.92, bottom=0.05, wspace=0.3, hspace=0.3)
+            cbar_ax = orb_fig.add_axes([0.9, 0.15, 0.02, 0.7])
+            orb_fig.colorbar(final_imshow_orb, cax=cbar_ax, label="Feature Intensity (ORB)")
+            orb_fig.suptitle("Local Feature Consistency (ORB)", fontsize=self.plot_params["font_size"] + 4)
+            orb_path = os.path.join(self.output_dir, "local_feature_consistency_orb.png")
+            orb_fig.savefig(orb_path, bbox_inches="tight")
+            plt.close(orb_fig)
 
-        # Title and save figure
-        plt.suptitle(f"Local Feature Consistency ({method.upper()})", fontsize=20)
-        save_path = os.path.join(self.output_dir, f"local_feature_consistency_{method}.png")
-        plt.savefig(save_path, bbox_inches='tight')
-        plt.close()
+        self.log(f"✅ [Step 11 Complete] Sobel map saved: {sobel_path}")
+        self.log(f"✅ [Step 11 Complete] ORB map saved: {orb_path}\n")
 
-        self.log(f"✅ [Step 11 Complete] Combined local feature map saved: {save_path}\n")
+        return sobel_data, orb_data
 
     def step_12_digit_heatmap_grid(self) -> None:
-        """Generates a heatmap for each digit (1–9) and plots them in a single composite 3×3 grid."""
+        """
+        Generates a heatmap for each digit (1–9) and plots them in a single composite 3×3 grid.
+
+        This method calculates the average intensity heatmap for each digit by combining all available
+        images for that digit. The heatmaps are then displayed in a 3x3 grid, and a colorbar is added
+        to indicate the intensity values.
+
+        The final grid is saved as an image in the output directory.
+
+        Returns:
+            None: This method does not return any value but saves the resulting heatmap grid to the output directory.
+        """
         self.log("\n🔥 [Step 12] Generating per-digit heatmap grid (1–9)...")
 
-        fig, axes = plt.subplots(3, 3, figsize=(10, 10))
-        fig.suptitle("Digit Heatmaps (1–9)", fontsize=16)
+        fig, axes = plt.subplots(3, 3, figsize=self.plot_params["figsize"])
+        fig.suptitle("Digit Heatmaps (1–9)", fontsize=self.plot_params["font_size"] + 2)
 
         digits = list(map(str, range(1, 10)))
+        reference_im = None
+
         with tqdm(total=len(digits), desc="Building heatmaps", ncols=100) as bar:
             for i, digit in enumerate(digits):
                 row, col = divmod(i, 3)
@@ -631,15 +919,18 @@ class DigitDatasetEvaluator:
 
                 path = self.digit_dirs.get(digit)
                 if not path or not os.path.exists(path):
-                    ax.set_title(f"Digit {digit} (missing)")
+                    ax.set_title(f"Digit {digit} (missing)", fontsize=self.plot_params["font_size"])
                     ax.axis("off")
                     bar.update(1)
                     continue
 
-                image_paths = [os.path.join(path, f) for f in os.listdir(path)
-                               if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+                image_paths = [
+                    os.path.join(path, f)
+                    for f in os.listdir(path)
+                    if f.lower().endswith(('.png', '.jpg', '.jpeg'))
+                ]
                 if not image_paths:
-                    ax.set_title(f"Digit {digit} (empty)")
+                    ax.set_title(f"Digit {digit} (empty)", fontsize=self.plot_params["font_size"])
                     ax.axis("off")
                     bar.update(1)
                     continue
@@ -656,8 +947,12 @@ class DigitDatasetEvaluator:
                         acc += img
                     heatmap = acc / len(image_paths)
 
-                    reference_im = ax.imshow(heatmap, cmap='hot', interpolation='nearest')
-                    ax.set_title(f"Digit {digit}")
+                    reference_im = ax.imshow(
+                        heatmap,
+                        cmap=self.plot_params["color_map"],
+                        interpolation="nearest"
+                    )
+                    ax.set_title(f"Digit {digit}", fontsize=self.plot_params["font_size"])
                     ax.axis("off")
                 except Exception as e:
                     self.log(f"❌ [Step 12] Failed for digit {digit}: {e}")
@@ -665,45 +960,500 @@ class DigitDatasetEvaluator:
 
                 bar.update(1)
 
-        # Manually adjust the layout to avoid tight_layout issues
+        # Manually adjust the layout
         plt.subplots_adjust(left=0.05, right=0.88, top=0.92, bottom=0.05, wspace=0.3, hspace=0.3)
 
-        # Add colorbar on the right side
-        cbar_ax = fig.add_axes([0.9, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
-        fig.colorbar(reference_im, cax=cbar_ax, label="Normalized Intensity")
+        # Add colorbar on the right
+        if reference_im is not None:
+            cbar_ax = fig.add_axes([0.9, 0.15, 0.02, 0.7])
+            fig.colorbar(reference_im, cax=cbar_ax, label="Normalized Intensity")
 
         # Save the figure
         output_path = os.path.join(self.output_dir, "digit_heatmap_grid.png")
-        plt.savefig(output_path)
+        plt.savefig(output_path, bbox_inches='tight')
         plt.close()
 
         self.log(f"🖼️ [Step 12] Saved heatmap grid → {output_path}")
         self.log("✅ [Step 12 Complete] Digit heatmap grid generated.\n")
 
+    def generate_table_1_dataset_summary(
+            self,
+            class_stats: Dict[str, Dict[str, int]],
+            image_size: str
+    ) -> pd.DataFrame:
+        """
+        Generates Table 1: Dataset Summary with improved formatting. Saves it as both a CSV and PNG image.
+
+        Args:
+            class_stats (Dict[str, Dict[str, int]]): Output from step_1_class_distribution().
+            image_size (str): Output from step_2_check_image_dimensions(), e.g., "32×32".
+
+        Returns:
+            pd.DataFrame: The DataFrame containing the summary table.
+        """
+        summary_rows = []
+        total_all = clean_all = distorted_all = other_all = 0
+
+        for digit in sorted(class_stats.keys(), key=int):
+            stats = class_stats[digit]
+            total = stats["total"]
+            clean = stats["clean"]
+            distorted = stats["distorted"]
+            other = total - clean - distorted
+
+            clean_pct = 100 * clean / total if total > 0 else 0
+            distorted_pct = 100 * distorted / total if total > 0 else 0
+            other_pct = 100 * other / total if total > 0 else 0
+
+            summary_rows.append({
+                "Digit": digit,
+                "Total": total,
+                "Clean %": f"{clean_pct:.1f}",
+                "Distorted %": f"{distorted_pct:.1f}",
+                "Other %": f"{other_pct:.1f}",
+                "Image Size": image_size
+            })
+
+            total_all += total
+            clean_all += clean
+            distorted_all += distorted
+            other_all += other
+
+        # Totals row
+        summary_rows.append({
+            "Digit": "Total",
+            "Total": total_all,
+            "Clean %": f"{100 * clean_all / total_all:.1f}" if total_all > 0 else "0.0",
+            "Distorted %": f"{100 * distorted_all / total_all:.1f}" if total_all > 0 else "0.0",
+            "Other %": f"{100 * other_all / total_all:.1f}" if total_all > 0 else "0.0",
+            "Image Size": image_size
+        })
+
+        df = pd.DataFrame(summary_rows)
+
+        # Save CSV
+        csv_path = os.path.join(self.output_dir, "table_1_dataset_summary.csv")
+        df.to_csv(csv_path, index=False)
+
+        # Save image with enhanced formatting
+        # Save image with compact layout and consistent style (like Table 2)
+        fig, ax = plt.subplots(figsize=(8, 0.1 * len(df) + 1.5))  # Adjust height based on row count
+        ax.axis("off")
+
+        # Add title above the table
+        fig.text(0.5, 0.98, "Table 1. Dataset Summary", ha="center", va="top",
+                 fontsize=13, weight="bold", color="black")
+
+        # Create the table
+        table = ax.table(
+            cellText=df.values,
+            colLabels=df.columns,
+            cellLoc="center",
+            loc="center",
+            colColours=["#ADD8E6"] * len(df.columns),
+        )
+
+        # Style cells
+        for (row, col), cell in table.get_celld().items():
+            cell.set_fontsize(9)
+            if row == 0:
+                cell.set_text_props(weight="bold", color="black")
+
+        # Tightly crop white space
+        plt.subplots_adjust(left=0.05, right=0.95, top=0.85, bottom=0.05)
+
+        # Save to file
+        image_path = os.path.join(self.output_dir, "table_1_dataset_summary.png")
+        plt.savefig(image_path, bbox_inches="tight", dpi=150, pad_inches=0.05)
+        plt.close()
+
+        # Log
+        self.report_lines.append("📋 Table 1. Dataset Summary\n")
+        self.report_lines.append(f"🖼️ Image Size: {image_size}")
+        self.report_lines.append(f"📝 Saved CSV → {csv_path}")
+        self.report_lines.append(f"🖼️ Saved Image → {image_path}\n")
+
+        return df
+
+    def generate_table_2_image_quality_issues(
+            self,
+            corrupt_paths: List[str],
+            blurry_images: List[Tuple[str, float]],
+            partial_paths: List[str]
+    ) -> None:
+        """
+        Generates and saves Table 2: Image Quality Issues, combining image issue counts per digit.
+
+        This table summarizes how many images per digit are corrupted, blurry, or partial.
+        It also includes percentages for blurry and partial images.
+
+        Args:
+            corrupt_paths (List[str]): List of image paths flagged as corrupt (from Step 5).
+            blurry_images (List[Tuple[str, float]]): List of blurry images and their sharpness score (from Step 7).
+            partial_paths (List[str]): List of image paths where digits are partial (from Step 9).
+
+        Returns:
+            None: Saves a CSV file and table image, and appends a table header to `self.report_lines`.
+        """
+        self.log("📋 Generating Table 2: Image Quality Issues...")
+
+        # Count images per digit for each issue type
+        def extract_digit(path: str) -> str:
+            return os.path.basename(os.path.dirname(path))
+
+        corrupt_counts = defaultdict(int)
+        for path in corrupt_paths:
+            corrupt_counts[extract_digit(path)] += 1
+
+        blurry_counts = defaultdict(int)
+        for path, _ in blurry_images:
+            blurry_counts[extract_digit(path)] += 1
+
+        partial_counts = defaultdict(int)
+        for path in partial_paths:
+            partial_counts[extract_digit(path)] += 1
+
+        # Get total image count per digit from digit_dirs
+        total_per_digit = {
+            digit: len(os.listdir(path)) for digit, path in self.digit_dirs.items()
+        }
+
+        # Build dataframe
+        digits = sorted(total_per_digit.keys(), key=int)
+        rows = []
+        for digit in digits:
+            total = total_per_digit[digit]
+            corrupt = corrupt_counts.get(digit, 0)
+            blurry = blurry_counts.get(digit, 0)
+            partial = partial_counts.get(digit, 0)
+            blurry_pct = (blurry / total * 100) if total else 0
+            partial_pct = (partial / total * 100) if total else 0
+            rows.append([
+                digit, corrupt, blurry, partial,
+                f"{blurry_pct:.1f}%", f"{partial_pct:.1f}%"
+            ])
+
+        df = pd.DataFrame(rows, columns=[
+            "Digit", "Corrupt Count", "Blurry Count", "Partial Count", "% Blurry", "% Partial"
+        ])
+
+        # Save CSV
+        csv_path = os.path.join(self.output_dir, "table_2_image_quality_issues.csv")
+        df.to_csv(csv_path, index=False)
+        self.log(f"📄 Saved Table 2 CSV → {csv_path}")
+
+        # Save table as image with a compact layout
+        fig, ax = plt.subplots(figsize=(8, 0.1 * len(df) + 1.5))  # Keep the size reasonable
+        ax.axis("off")
+
+        # Add title above the table
+        fig.text(0.5, 0.98, "Table 2. Image Quality Issues Summary", ha="center", va="top",
+                 fontsize=13, weight="bold", color="black")
+
+        # Create the table
+        table = ax.table(
+            cellText=df.values,
+            colLabels=df.columns,
+            cellLoc="center",
+            loc="center",
+            colColours=["#add8e6"] * len(df.columns),
+        )
+
+        # Style cells
+        for (row, col), cell in table.get_celld().items():
+            cell.set_fontsize(9)
+            if row == 0:
+                cell.set_text_props(weight="bold", color="black")
+
+        # No table scaling; preserve cell sizes
+        plt.subplots_adjust(left=0.05, right=0.95, top=0.85, bottom=0.05)  # Crop white space
+
+        image_path = os.path.join(self.output_dir, "table_2_image_quality_issues.png")
+        plt.savefig(image_path, bbox_inches="tight", dpi=150, pad_inches=0.05)
+        plt.close()
+
+        self.log(f"🖼️ Saved compact Table 2 image → {image_path}")
+
+        # Add header to report lines (not full table to avoid clutter)
+        self.report_lines.append("📋 Table 2. Image Quality Issues Summary\n")
+
+    def generate_table_3_duplicate_summary(self, all_duplicates_by_digit: Dict[str, List[List[str]]]) -> None:
+        """
+        Generates and saves Table 3: Duplicate Image Summary.
+
+        Args:
+            all_duplicates_by_digit (Dict[str, List[List[str]]]): Grouped duplicate images per digit.
+
+        Returns:
+            None: Saves a CSV file and table image, and appends a table header to self.report_lines.
+        """
+        self.log("📋 Generating Table 3: Duplicate Image Summary...")
+
+        digits = sorted(self.digit_dirs.keys(), key=int)
+        rows = []
+
+        for digit in digits:
+            groups = all_duplicates_by_digit.get(digit, [])
+            num_groups = len(groups)
+            total_images = sum(len(g) for g in groups)
+            max_group_size = max((len(g) for g in groups), default=0)
+
+            rows.append([
+                digit,
+                num_groups,
+                total_images,
+                max_group_size
+            ])
+
+        df = pd.DataFrame(rows, columns=[
+            "Digit", "Duplicate Groups", "Images in Duplicates", "Max Group Size"
+        ])
+
+        # Save CSV
+        csv_path = os.path.join(self.output_dir, "table_3_duplicate_summary.csv")
+        df.to_csv(csv_path, index=False)
+        self.log(f"📄 Saved Table 3 CSV → {csv_path}")
+
+        # Save table as image with compact layout
+        fig, ax = plt.subplots(figsize=(8, 0.1 * len(df) + 1.5))
+        ax.axis("off")
+
+        fig.text(0.5, 0.98, "Table 3. Duplicate Image Summary", ha="center", va="top",
+                 fontsize=13, weight="bold", color="black")
+
+        table = ax.table(
+            cellText=df.values,
+            colLabels=df.columns,
+            cellLoc="center",
+            loc="center",
+            colColours=["#add8e6"] * len(df.columns),
+        )
+
+        for (row, col), cell in table.get_celld().items():
+            cell.set_fontsize(9)
+            if row == 0:
+                cell.set_text_props(weight="bold", color="black")
+
+        plt.subplots_adjust(left=0.05, right=0.95, top=0.85, bottom=0.05)
+
+        image_path = os.path.join(self.output_dir, "table_3_duplicate_summary.png")
+        plt.savefig(image_path, bbox_inches="tight", dpi=150, pad_inches=0.05)
+        plt.close()
+
+        self.report_lines.append("📋 Table 3. Duplicate Image Summary\n")
+
+    def generate_table_4_dataset_diversity(self, diversity_data: List[Dict[str, Union[str, float, int]]]) -> None:
+        """
+        Generates and saves Table 4: Dataset Diversity based on perceptual hash distance.
+
+        Args:
+            diversity_data (List[Dict[str, Union[str, float, int]]]): List of per-digit diversity metrics from Step 8.
+
+        Returns:
+            None: Saves a CSV file and table image, and appends a table header to self.report_lines.
+        """
+        self.log("📊 Generating Table 4: Dataset Diversity...")
+
+        # Build DataFrame
+        df = pd.DataFrame(diversity_data)
+        df['Digit'] = df['Digit'].astype(int)
+        df = df.sort_values(by="Digit").reset_index(drop=True)
+
+        # Compute summary metrics
+        avg_div_score = df['Diversity Score'].mean()
+        combined_unique = df['Unique Samples'].sum()
+
+        # Save as CSV
+        csv_path = os.path.join(self.output_dir, "table_4_dataset_diversity.csv")
+        df.to_csv(csv_path, index=False)
+        self.log(f"📄 Saved Table 4 CSV → {csv_path}")
+
+        # Save as styled image with separate summary text
+        fig_height = 0.1 * len(df) + 2.5
+        fig, ax = plt.subplots(figsize=(8, fig_height))
+        ax.axis("off")
+
+        fig.text(0.5, 0.98, "Table 4. Dataset Diversity", ha="center", va="top",
+                 fontsize=13, weight="bold", color="black")
+
+        table = ax.table(
+            cellText=df.values,
+            colLabels=df.columns,
+            cellLoc="center",
+            loc="center",
+            colColours=["#add8e6"] * len(df.columns),
+        )
+
+        for (row, col), cell in table.get_celld().items():
+            cell.set_fontsize(9)
+            if row == 0:
+                cell.set_text_props(weight="bold", color="black")
+
+        # Add summary text below the table
+        summary_y = 0.05
+        fig.text(0.05, summary_y, f"Avg Diversity Score: {avg_div_score:.2f}", ha="left", fontsize=10)
+        fig.text(0.05, summary_y - 0.05, f"Combined Unique Samples: {combined_unique}", ha="left", fontsize=10)
+
+        plt.subplots_adjust(left=0.05, right=0.95, top=0.9, bottom=0.05)
+
+        image_path = os.path.join(self.output_dir, "table_4_dataset_diversity.png")
+        plt.savefig(image_path, bbox_inches="tight", dpi=150, pad_inches=0.05)
+        plt.close()
+
+        self.report_lines.append("📊 Table 4. Dataset Diversity\n")
+        self.log("✅ [Table 4] Dataset Diversity generated successfully.")
+
+    def generate_table_5_feature_consistency(self, sobel_data: List[Dict[str, Union[str, float, int]]],
+                                             orb_data: List[Dict[str, Union[str, float, int]]]) -> None:
+        """
+        Generates and saves Table 5: Feature Consistency based on Sobel and ORB analysis.
+
+        Args:
+            sobel_data (List[Dict]): List of per-digit Sobel metrics.
+            orb_data (List[Dict]): List of per-digit ORB metrics.
+
+        Returns:
+            None: Saves a CSV file and table image, and appends a table header to self.report_lines.
+        """
+        self.log("📊 Generating Table 5: Feature Consistency...")
+
+        # Merge Sobel and ORB data based on 'Digit'
+        feature_data = []
+        for sobel_row in sobel_data:
+            digit = sobel_row["Digit"]
+            orb_row = next((orb for orb in orb_data if orb["Digit"] == digit), {})
+            feature_data.append({
+                "Digit": digit,
+                "Avg Sobel Intensity": sobel_row.get("Avg Sobel Intensity", "—"),
+                "Avg ORB Keypoints": orb_row.get("Avg ORB Keypoints", "—")
+            })
+
+        # Create DataFrame
+        df = pd.DataFrame(feature_data)
+
+        # Format 'Digit' as integers (if needed)
+        df['Digit'] = df['Digit'].astype(int)
+
+        # Ensure 'Avg Sobel Intensity' and 'Avg ORB Keypoints' are always rounded to 2 decimals
+        df['Avg Sobel Intensity'] = df['Avg Sobel Intensity'].apply(
+            lambda x: f"{x:.2f}" if isinstance(x, (int, float)) else x)
+
+        df['Avg ORB Keypoints'] = df['Avg ORB Keypoints'].apply(
+            lambda x: f"{x:.2f}" if isinstance(x, (int, float)) else x)
+
+        # Calculate overall averages, excluding '—' values (non-numeric)
+        sobel_numeric = pd.to_numeric(df['Avg Sobel Intensity'], errors='coerce')
+        orb_numeric = pd.to_numeric(df['Avg ORB Keypoints'], errors='coerce')
+
+        avg_sobel_intensity = sobel_numeric.mean()
+        avg_orb_keypoints = orb_numeric.mean()
+
+        # Add final row for overall averages, but do it after sorting
+        overall_row = pd.DataFrame([{
+            "Digit": "Overall",
+            "Avg Sobel Intensity": f"{avg_sobel_intensity:.2f}",
+            "Avg ORB Keypoints": f"{avg_orb_keypoints:.2f}"
+        }])
+
+        # Sort the DataFrame by 'Digit', ensuring 'Overall' comes last
+        df = df.sort_values(by="Digit", key=lambda x: x.apply(lambda y: (y != 'Overall', y)))
+
+        # Now add the "Overall" row at the end
+        df = pd.concat([df, overall_row], ignore_index=True)
+
+        # Save as CSV
+        csv_path = os.path.join(self.output_dir, "table_5_feature_consistency.csv")
+        df.to_csv(csv_path, index=False)
+        self.log(f"📄 Saved Table 5 CSV → {csv_path}")
+
+        # Save as styled image
+        fig, ax = plt.subplots(figsize=(8, 0.1 * len(df) + 1.5))
+        ax.axis("off")
+
+        fig.text(0.5, 0.98, "Table 5. Feature Consistency (Sobel & ORB)", ha="center", va="top",
+                 fontsize=13, weight="bold", color="black")
+
+        table = ax.table(
+            cellText=df.values,
+            colLabels=df.columns,
+            cellLoc="center",
+            loc="center",
+            colColours=["#add8e6"] * len(df.columns),
+        )
+
+        # Formatting table cells
+        for (row, col), cell in table.get_celld().items():
+            cell.set_fontsize(9)
+            if row == 0:
+                cell.set_text_props(weight="bold", color="black")
+
+        plt.subplots_adjust(left=0.05, right=0.95, top=0.85, bottom=0.05)
+        image_path = os.path.join(self.output_dir, "table_5_feature_consistency.png")
+        plt.savefig(image_path, bbox_inches="tight", dpi=150, pad_inches=0.05)
+        plt.close()
+
+        self.report_lines.append("📊 Table 5. Feature Consistency (Sobel & ORB)\n")
+        self.log("✅ [Table 5] Feature Consistency generated successfully.")
+
     def run_full_evaluation(self) -> None:
-        """Runs a full evaluation pipeline and generates report artifacts."""
+        """
+        Runs the complete dataset evaluation pipeline and generates various diagnostic reports.
+
+        This method sequentially performs multiple analyses on the dataset to assess:
+            - Class distribution balance.
+            - Image size consistency.
+            - Visual inspection via sample grid.
+            - Intensity histogram statistics.
+            - Detection of corrupt, blurry, or partially visible digits.
+            - Heatmap analysis for digit centering.
+            - Feature consistency across digits using Sobel and ORB methods.
+            - Duplicate image detection.
+            - Dataset diversity analysis.
+            - Aggregated metrics into summary tables.
+
+        Artifacts generated include:
+            - PNG visualizations (e.g., heatmaps, histograms, grids).
+            - CSV tables with numerical results.
+            - A compiled textual report saved in the output directory.
+
+        The final report consolidates all findings and helps evaluate the dataset’s quality and reliability
+        before use in model training or benchmarking.
+
+        Returns:
+            None
+        """
         self.log("🧪 Running full dataset evaluation pipeline...")
         self.log(f"Dataset path: {self.dataset_path}")
         self.log(f"Evaluation time: {datetime.datetime.now()}\n")
 
-        self.step_1_class_distribution()
-        self.step_2_check_image_dimensions()
+        # Step-wise pipeline
+        class_stats = self.step_1_class_distribution()
+        image_size = self.step_2_check_image_dimensions()
         self.step_3_visualize_sample_grid()
         self.step_4_intensity_histograms()
-        self.step_5_detect_corrupt_images()
+        corrupt_paths = self.step_5_detect_corrupt_images()
         self.step_6_digit_centering_heatmap()
-        self.step_7_detect_blurry_images()
-        self.step_8_estimate_dataset_diversity()
-        self.step_9_detect_partial_digits()
-        self.step_10_detect_duplicate_images()
-        self.step_11_local_feature_consistency(method="sobel")
-        self.step_11_local_feature_consistency(method="orb")
+        blurry_images = self.step_7_detect_blurry_images()
+        diversity_data = self.step_8_estimate_dataset_diversity()
+        partial_paths = self.step_9_detect_partial_digits()
+        _, all_duplicates_by_digit = self.step_10_detect_duplicate_images()
+        sobel_data, orb_data = self.step_11_local_feature_consistency(samples_per_digit=100)
+        self.step_12_digit_heatmap_grid()
 
+        # Table/report generation
+        self.generate_table_1_dataset_summary(class_stats, image_size)
+        self.generate_table_2_image_quality_issues(corrupt_paths, blurry_images, partial_paths)
+        self.generate_table_3_duplicate_summary(all_duplicates_by_digit)
+        self.generate_table_4_dataset_diversity(diversity_data)
+        self.generate_table_5_feature_consistency(sobel_data, orb_data)
+
+        # Save the final text report
         report_path = os.path.join(self.output_dir, "dataset_evaluation_report.txt")
         with open(report_path, "w", encoding="utf-8") as f:
             f.write("\n".join(self.report_lines))
 
         self.log(f"\n✅ Evaluation complete. Report saved to '{report_path}'.")
+
 
 if __name__ == "__main__":
     evaluator = DigitDatasetEvaluator(dataset_path="digit_dataset")
