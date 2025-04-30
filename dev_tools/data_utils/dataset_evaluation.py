@@ -974,6 +974,26 @@ class DigitDatasetEvaluator:
         self.log(f"🖼️ [Step 12] Saved heatmap grid → {output_path}")
         self.log("✅ [Step 12 Complete] Digit heatmap grid generated.\n")
 
+    def apply_alternating_row_colors(self, table) -> None:
+        """
+        Applies alternating row colors (light grey for even rows and white for odd rows) to the table.
+
+        Args:
+            table: The table object to which row colors will be applied.
+
+        Returns:
+            None: Modifies the table in place.
+        """
+        for (row, col), cell in table.get_celld().items():
+            cell.set_fontsize(9)
+            if row == 0:
+                cell.set_text_props(weight="bold", color="black")
+            else:
+                if row % 2 == 0:
+                    cell.set_facecolor("#e0e0e0")  # Medium light grey for even rows
+                else:
+                    cell.set_facecolor("white")  # White for odd rows
+
     def generate_table_1_dataset_summary(
             self,
             class_stats: Dict[str, Dict[str, int]],
@@ -1005,9 +1025,10 @@ class DigitDatasetEvaluator:
             distorted_pct = 100 * distorted / total if total > 0 else 0
             other_pct = 100 * other / total if total > 0 else 0
 
+            # Ensure 1 decimal place for percentages
             summary_rows.append({
                 "Digit": digit,
-                "Total": total,
+                "Total": f"{total:,}",  # Format total with thousands separator
                 "Clean %": f"{clean_pct:.1f}",
                 "Distorted %": f"{distorted_pct:.1f}",
                 "Other %": f"{other_pct:.1f}",
@@ -1022,7 +1043,7 @@ class DigitDatasetEvaluator:
         # Totals row
         summary_rows.append({
             "Digit": "Total",
-            "Total": total_all,
+            "Total": f"{total_all:,}",  # Format total with thousands separator
             "Clean %": f"{100 * clean_all / total_all:.1f}" if total_all > 0 else "0.0",
             "Distorted %": f"{100 * distorted_all / total_all:.1f}" if total_all > 0 else "0.0",
             "Other %": f"{100 * other_all / total_all:.1f}" if total_all > 0 else "0.0",
@@ -1036,7 +1057,6 @@ class DigitDatasetEvaluator:
         df.to_csv(csv_path, index=False)
 
         # Save image with enhanced formatting
-        # Save image with compact layout and consistent style (like Table 2)
         fig, ax = plt.subplots(figsize=(8, 0.1 * len(df) + 1.5))  # Adjust height based on row count
         ax.axis("off")
 
@@ -1052,6 +1072,8 @@ class DigitDatasetEvaluator:
             loc="center",
             colColours=["#ADD8E6"] * len(df.columns),
         )
+
+        self.apply_alternating_row_colors(table)
 
         # Style cells
         for (row, col), cell in table.get_celld().items():
@@ -1096,7 +1118,6 @@ class DigitDatasetEvaluator:
         """
         self.log("📋 Generating Table 2: Image Quality Issues...")
 
-        # Count images per digit for each issue type
         def extract_digit(path: str) -> str:
             return os.path.basename(os.path.dirname(path))
 
@@ -1112,14 +1133,14 @@ class DigitDatasetEvaluator:
         for path in partial_paths:
             partial_counts[extract_digit(path)] += 1
 
-        # Get total image count per digit from digit_dirs
         total_per_digit = {
             digit: len(os.listdir(path)) for digit, path in self.digit_dirs.items()
         }
 
-        # Build dataframe
         digits = sorted(total_per_digit.keys(), key=int)
         rows = []
+        total_corrupt = total_blurry = total_partial = total_images = 0
+
         for digit in digits:
             total = total_per_digit[digit]
             corrupt = corrupt_counts.get(digit, 0)
@@ -1127,10 +1148,30 @@ class DigitDatasetEvaluator:
             partial = partial_counts.get(digit, 0)
             blurry_pct = (blurry / total * 100) if total else 0
             partial_pct = (partial / total * 100) if total else 0
+
             rows.append([
-                digit, corrupt, blurry, partial,
-                f"{blurry_pct:.1f}%", f"{partial_pct:.1f}%"
+                digit,
+                f"{corrupt:,}",
+                f"{blurry:,}",
+                f"{partial:,}",
+                f"{blurry_pct:.1f}%",
+                f"{partial_pct:.1f}%"
             ])
+
+            total_corrupt += corrupt
+            total_blurry += blurry
+            total_partial += partial
+            total_images += total
+
+        # Add total row
+        rows.append([
+            "Total",
+            f"{total_corrupt:,}",
+            f"{total_blurry:,}",
+            f"{total_partial:,}",
+            f"{(total_blurry / total_images * 100):.1f}%" if total_images else "0.0%",
+            f"{(total_partial / total_images * 100):.1f}%" if total_images else "0.0%"
+        ])
 
         df = pd.DataFrame(rows, columns=[
             "Digit", "Corrupt Count", "Blurry Count", "Partial Count", "% Blurry", "% Partial"
@@ -1140,15 +1181,13 @@ class DigitDatasetEvaluator:
         csv_path = os.path.join(self.output_dir, "table_2_image_quality_issues.csv")
         df.to_csv(csv_path, index=False)
 
-        # Save table as image with a compact layout
-        fig, ax = plt.subplots(figsize=(8, 0.1 * len(df) + 1.5))  # Keep the size reasonable
+        # Save image
+        fig, ax = plt.subplots(figsize=(8, 0.1 * len(df) + 1.5))
         ax.axis("off")
 
-        # Add title above the table
         fig.text(0.5, 0.98, "Table 2. Image Quality Issues Summary", ha="center", va="top",
                  fontsize=13, weight="bold", color="black")
 
-        # Create the table
         table = ax.table(
             cellText=df.values,
             colLabels=df.columns,
@@ -1157,20 +1196,20 @@ class DigitDatasetEvaluator:
             colColours=["#add8e6"] * len(df.columns),
         )
 
+        # Apply alternating row colors
+        self.apply_alternating_row_colors(table)
+
         # Style cells
         for (row, col), cell in table.get_celld().items():
             cell.set_fontsize(9)
             if row == 0:
                 cell.set_text_props(weight="bold", color="black")
 
-        # No table scaling; preserve cell sizes
-        plt.subplots_adjust(left=0.05, right=0.95, top=0.85, bottom=0.05)  # Crop white space
-
+        plt.subplots_adjust(left=0.05, right=0.95, top=0.85, bottom=0.05)
         image_path = os.path.join(self.output_dir, "table_2_image_quality_issues.png")
         plt.savefig(image_path, bbox_inches="tight", dpi=150, pad_inches=0.05)
         plt.close()
 
-        # Log
         self.log(f"📄 Saved CSV → {csv_path}")
         self.log(f"📋 Saved table image → {image_path}")
         self.log("✅ [Table 2] Image Quality Issues Summary generated successfully.\n")
@@ -1190,18 +1229,34 @@ class DigitDatasetEvaluator:
         digits = sorted(self.digit_dirs.keys(), key=int)
         rows = []
 
+        total_groups = total_images = 0
+        max_group_sizes = []
+
         for digit in digits:
             groups = all_duplicates_by_digit.get(digit, [])
             num_groups = len(groups)
-            total_images = sum(len(g) for g in groups)
+            num_images = sum(len(g) for g in groups)
             max_group_size = max((len(g) for g in groups), default=0)
+
+            total_groups += num_groups
+            total_images += num_images
+            max_group_sizes.append(max_group_size)
 
             rows.append([
                 digit,
-                num_groups,
-                total_images,
-                max_group_size
+                f"{num_groups:,}",
+                f"{num_images:,}",
+                f"{max_group_size:,}"
             ])
+
+        # Total row
+        avg_max_group_size = sum(max_group_sizes) / len(max_group_sizes) if max_group_sizes else 0
+        rows.append([
+            "Total",
+            f"{total_groups:,}",
+            f"{total_images:,}",
+            f"{avg_max_group_size:.1f}"
+        ])
 
         df = pd.DataFrame(rows, columns=[
             "Digit", "Duplicate Groups", "Images in Duplicates", "Max Group Size"
@@ -1211,7 +1266,7 @@ class DigitDatasetEvaluator:
         csv_path = os.path.join(self.output_dir, "table_3_duplicate_summary.csv")
         df.to_csv(csv_path, index=False)
 
-        # Save table as image with compact layout
+        # Save table as image
         fig, ax = plt.subplots(figsize=(8, 0.1 * len(df) + 1.5))
         ax.axis("off")
 
@@ -1226,6 +1281,8 @@ class DigitDatasetEvaluator:
             colColours=["#add8e6"] * len(df.columns),
         )
 
+        self.apply_alternating_row_colors(table)
+
         for (row, col), cell in table.get_celld().items():
             cell.set_fontsize(9)
             if row == 0:
@@ -1237,7 +1294,6 @@ class DigitDatasetEvaluator:
         plt.savefig(image_path, bbox_inches="tight", dpi=150, pad_inches=0.05)
         plt.close()
 
-        # Logs
         self.log(f"📄 Saved CSV → {csv_path}")
         self.log(f"📋 Saved table image → {image_path}")
         self.log("✅ [Table 3] Duplicate Image Summary generated successfully.\n")
@@ -1272,7 +1328,7 @@ class DigitDatasetEvaluator:
         # Format values for display in the image
         df_display = df.copy()
         df_display['Digit'] = df_display['Digit'].astype(str)
-        df_display['Unique Samples'] = df_display['Unique Samples'].apply(lambda x: f"{x:d}")
+        df_display['Unique Samples'] = df_display['Unique Samples'].apply(lambda x: f"{x:,}")
         df_display['Diversity Score'] = df_display['Diversity Score'].apply(lambda x: f"{x:.2f}")
 
         # Create compact figure
@@ -1284,7 +1340,7 @@ class DigitDatasetEvaluator:
         fig.text(0.5, 0.97, "Table 4. Dataset Diversity", ha="center", va="top",
                  fontsize=13, weight="bold", color="black")
 
-        # Table
+        # Table with alternating row colors
         table = ax.table(
             cellText=df_display.values,
             colLabels=df_display.columns,
@@ -1293,15 +1349,12 @@ class DigitDatasetEvaluator:
             colColours=["#add8e6"] * len(df_display.columns),
         )
 
-        for (row, col), cell in table.get_celld().items():
-            cell.set_fontsize(9)
-            if row == 0:
-                cell.set_text_props(weight="bold", color="black")
+        self.apply_alternating_row_colors(table)
 
-        # Summary text with more space between lines
+        # Summary text with formatted combined_unique
         summary_y = 0.02
         fig.text(0.05, summary_y, f"Avg Diversity Score: {avg_div_score:.2f}", ha="left", fontsize=9.5)
-        fig.text(0.05, summary_y - 0.06, f"Combined Unique Samples: {combined_unique}", ha="left", fontsize=9.5)
+        fig.text(0.05, summary_y - 0.06, f"Combined Unique Samples: {combined_unique:,}", ha="left", fontsize=9.5)
 
         # Layout and save
         plt.subplots_adjust(left=0.05, right=0.95, top=0.86, bottom=0.05)
@@ -1390,6 +1443,8 @@ class DigitDatasetEvaluator:
             colColours=["#add8e6"] * len(df.columns),
         )
 
+        self.apply_alternating_row_colors(table)
+
         # Formatting table cells
         for (row, col), cell in table.get_celld().items():
             cell.set_fontsize(9)
@@ -1466,7 +1521,10 @@ class DigitDatasetEvaluator:
 
 
 if __name__ == "__main__":
-    evaluator = DigitDatasetEvaluator(dataset_path="test_dataset")
-    # evaluator.run_full_evaluation()
-    diversity_data = evaluator.step_8_estimate_dataset_diversity()
-    evaluator.generate_table_4_dataset_diversity(diversity_data)
+    evaluator = DigitDatasetEvaluator(dataset_path="digit_dataset")
+    evaluator.run_full_evaluation()
+    # diversity_data = evaluator.step_8_estimate_dataset_diversity()
+    # evaluator.generate_table_4_dataset_diversity(diversity_data)
+    # class_stats = evaluator.step_1_class_distribution()
+    # image_size = evaluator.step_2_check_image_dimensions()
+    # evaluator.generate_table_1_dataset_summary(class_stats, image_size)
