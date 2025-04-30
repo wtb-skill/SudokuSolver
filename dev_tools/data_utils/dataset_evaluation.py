@@ -1256,31 +1256,41 @@ class DigitDatasetEvaluator:
 
         # Build DataFrame
         df = pd.DataFrame(diversity_data)
-        df['Digit'] = df['Digit'].astype(int)
+        df['Digit'] = df['Digit'].astype('int64')
+        df['Unique Samples'] = df['Unique Samples'].astype('int64')
+        df['Diversity Score'] = df['Diversity Score'].astype(float).round(2)
         df = df.sort_values(by="Digit").reset_index(drop=True)
 
         # Compute summary metrics
         avg_div_score = df['Diversity Score'].mean()
         combined_unique = df['Unique Samples'].sum()
 
-        # Save as CSV
+        # Save raw values to CSV
         csv_path = os.path.join(self.output_dir, "table_4_dataset_diversity.csv")
         df.to_csv(csv_path, index=False)
 
-        # Save as styled image with separate summary text
-        fig_height = 0.1 * len(df) + 2.5
+        # Format values for display in the image
+        df_display = df.copy()
+        df_display['Digit'] = df_display['Digit'].astype(str)
+        df_display['Unique Samples'] = df_display['Unique Samples'].apply(lambda x: f"{x:d}")
+        df_display['Diversity Score'] = df_display['Diversity Score'].apply(lambda x: f"{x:.2f}")
+
+        # Create compact figure
+        fig_height = 0.08 * len(df_display) + 1.6
         fig, ax = plt.subplots(figsize=(8, fig_height))
         ax.axis("off")
 
-        fig.text(0.5, 0.98, "Table 4. Dataset Diversity", ha="center", va="top",
+        # Title
+        fig.text(0.5, 0.97, "Table 4. Dataset Diversity", ha="center", va="top",
                  fontsize=13, weight="bold", color="black")
 
+        # Table
         table = ax.table(
-            cellText=df.values,
-            colLabels=df.columns,
+            cellText=df_display.values,
+            colLabels=df_display.columns,
             cellLoc="center",
             loc="center",
-            colColours=["#add8e6"] * len(df.columns),
+            colColours=["#add8e6"] * len(df_display.columns),
         )
 
         for (row, col), cell in table.get_celld().items():
@@ -1288,15 +1298,15 @@ class DigitDatasetEvaluator:
             if row == 0:
                 cell.set_text_props(weight="bold", color="black")
 
-        # Add summary text below the table
-        summary_y = 0.05
-        fig.text(0.05, summary_y, f"Avg Diversity Score: {avg_div_score:.2f}", ha="left", fontsize=10)
-        fig.text(0.05, summary_y - 0.05, f"Combined Unique Samples: {combined_unique}", ha="left", fontsize=10)
+        # Summary text with more space between lines
+        summary_y = 0.02
+        fig.text(0.05, summary_y, f"Avg Diversity Score: {avg_div_score:.2f}", ha="left", fontsize=9.5)
+        fig.text(0.05, summary_y - 0.06, f"Combined Unique Samples: {combined_unique}", ha="left", fontsize=9.5)
 
-        plt.subplots_adjust(left=0.05, right=0.95, top=0.9, bottom=0.05)
-
+        # Layout and save
+        plt.subplots_adjust(left=0.05, right=0.95, top=0.86, bottom=0.05)
         image_path = os.path.join(self.output_dir, "table_4_dataset_diversity.png")
-        plt.savefig(image_path, bbox_inches="tight", dpi=150, pad_inches=0.05)
+        plt.savefig(image_path, bbox_inches="tight", dpi=150, pad_inches=0.01)
         plt.close()
 
         self.log(f"📄 Saved CSV → {csv_path}")
@@ -1456,6 +1466,7 @@ class DigitDatasetEvaluator:
 
 
 if __name__ == "__main__":
-    evaluator = DigitDatasetEvaluator(dataset_path="digit_dataset")
-    evaluator.run_full_evaluation()
-    # evaluator.step_11_local_feature_consistency()
+    evaluator = DigitDatasetEvaluator(dataset_path="test_dataset")
+    # evaluator.run_full_evaluation()
+    diversity_data = evaluator.step_8_estimate_dataset_diversity()
+    evaluator.generate_table_4_dataset_diversity(diversity_data)
