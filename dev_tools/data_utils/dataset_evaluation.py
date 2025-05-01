@@ -1502,7 +1502,7 @@ class DigitDatasetEvaluator:
         diversity_data = self.step_8_estimate_dataset_diversity()
         partial_paths = self.step_9_detect_partial_digits()
         _, all_duplicates_by_digit = self.step_10_detect_duplicate_images()
-        sobel_data, orb_data = self.step_11_local_feature_consistency(samples_per_digit=10000)
+        sobel_data, orb_data = self.step_11_local_feature_consistency(samples_per_digit=100)
         self.step_12_digit_heatmap_grid()
 
         # Table/report generation
