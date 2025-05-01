@@ -1,0 +1,87 @@
+🧪 Running full dataset evaluation pipeline...
+Dataset path: digit_dataset
+Evaluation time: 2025-05-01 15:27:38.290061
+
+
+📊 [Step 1] Starting class distribution analysis...
+📊 [Step 1] Saved class distribution histogram → evaluation_reports\class_distribution_histogram.png
+✅ [Step 1 Complete] Class distribution analysis done.
+
+
+📏 [Step 2] Checking image dimensions...
+[Step 2] Found 1 unique image sizes.
+[Step 2] Size (32, 32): 90000 images. Examples: ['digit_dataset\\1\\clean_0.png', 'digit_dataset\\1\\clean_1.png', 'digit_dataset\\1\\clean_10.png']
+📊 [Step 2] Saved image dimension histogram → evaluation_reports\image_dimension_histogram.png
+✅ [Step 2 Complete] Image dimension check done.
+
+
+🖼️ [Step 3] Generating sample grid visualization...
+✅ [Step 3 Complete] Sample image grid saved as 'evaluation_reports\sample_grid.png'
+
+
+📈 [Step 4] Generating pixel intensity histograms...
+✅ [Step 4 Complete] Histogram saved as 'evaluation_reports\pixel_histogram.png'
+
+
+🔍 [Step 5] Scanning for corrupt images...
+✅ [Step 5] No corrupt images detected.
+✅ [Step 5 Complete] Corrupt image scan finished.
+
+
+🔥 [Step 6] Generating digit centering heatmap...
+✅ [Step 6 Complete] Digit centering heatmap saved as 'evaluation_reports\centering_heatmap.png'
+
+
+🔍 [Step 7] Detecting blurry images...
+[Step 7] Found 0 blurry images (Laplacian var < 100.0).
+✅ [Step 7 Complete] Blurry image detection done.
+
+
+🌈 [Step 8] Estimating dataset diversity (phash distance)...
+✅ [Step 8 Complete] Dataset diversity estimation done.
+
+
+🔍 [Step 9] Detecting partial digits (those touching the image frame)...
+🖼️ [Step 9] Building composite image grid of partial digits...
+🟠 [Step 9] Found 12839 potentially partial digit images.
+✅ [Step 9 Complete] Composite image of partial digits saved as 'evaluation_reports\partial_digits_grid.png'
+
+
+🔍 [Step 10] Detecting duplicate or near-duplicate images within each digit class...
+✅ [Step 10 Complete] Saved composite image of duplicate digits → evaluation_reports\duplicate_images_grid.png
+📊 Saved histogram of duplicate groups per digit → evaluation_reports\duplicate_group_histogram.png
+
+
+🔍 [Step 11] Checking local feature consistency using Sobel and ORB methods...
+✅ [Step 11 Complete] Sobel map saved: evaluation_reports\local_feature_consistency_sobel.png
+✅ [Step 11 Complete] ORB map saved: evaluation_reports\local_feature_consistency_orb.png
+
+
+🔥 [Step 12] Generating per-digit heatmap grid (1–9)...
+🖼️ [Step 12] Saved heatmap grid → evaluation_reports\digit_heatmap_grid.png
+✅ [Step 12 Complete] Digit heatmap grid generated.
+
+📋 Generating Table 1: Dataset Summary...
+📄 Saved CSV → evaluation_reports\table_1_dataset_summary.csv
+📋 Saved table image → evaluation_reports\table_1_dataset_summary.png
+✅ [Table 1] Dataset Summary... generated successfully.
+
+📋 Generating Table 2: Image Quality Issues...
+📄 Saved CSV → evaluation_reports\table_2_image_quality_issues.csv
+📋 Saved table image → evaluation_reports\table_2_image_quality_issues.png
+✅ [Table 2] Image Quality Issues Summary generated successfully.
+
+📋 Generating Table 3: Duplicate Image Summary...
+📄 Saved CSV → evaluation_reports\table_3_duplicate_summary.csv
+📋 Saved table image → evaluation_reports\table_3_duplicate_summary.png
+✅ [Table 3] Duplicate Image Summary generated successfully.
+
+📋 Generating Table 4: Dataset Diversity...
+📄 Saved CSV → evaluation_reports\table_4_dataset_diversity.csv
+📋 Saved table image → evaluation_reports\table_4_dataset_diversity.png
+✅ [Table 4] Dataset Diversity generated successfully.
+
+📋 Generating Table 5: Feature Consistency (Sobel & ORB)...
+📄 Saved CSV → evaluation_reports\table_5_feature_consistency.csv
+📋 Saved table image → evaluation_reports\table_5_feature_consistency.png
+✅ [Table 5] Feature Consistency (Sobel & ORB) generated successfully.
