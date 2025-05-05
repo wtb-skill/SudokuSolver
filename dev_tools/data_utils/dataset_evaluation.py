@@ -104,29 +104,34 @@ class DigitDatasetEvaluator:
 
             images = os.listdir(path)
             clean = len([img for img in images if "clean" in img])
-            distorted = len(images) - clean
+            distorted = len([img for img in images if "distorted" in img])
+            other = len(images) - clean - distorted
 
             summary[digit] = {
                 "total": len(images),
                 "clean": clean,
-                "distorted": distorted
+                "distorted": distorted,
+                "other": other
             }
 
         # 📊 Generate grouped bar chart
         digits = sorted(summary.keys(), key=int)
         totals = [summary[d]["total"] for d in digits]
-        cleans = [summary[d]["clean"] for d in digits]
-        distorteds = [summary[d]["distorted"] for d in digits]
+        clean = [summary[d]["clean"] for d in digits]
+        distorted = [summary[d]["distorted"] for d in digits]
+        other = [summary[d]["other"] for d in digits]
 
         x = range(len(digits))
         width = 0.3
 
         plt.figure(figsize=plot_params["figsize"])
-        plt.bar([i - width for i in x], totals, width=width, label="Total", color="gray",
+        plt.bar([i - 1.5 * width for i in x], totals, width=width, label="Total", color="gray",
                 edgecolor=plot_params["bar_edgecolor"])
-        plt.bar(x, cleans, width=width, label="Clean", color=plot_params["bar_color"],
+        plt.bar([i - 0.5 * width for i in x], clean, width=width, label="Clean", color=plot_params["bar_color"],
                 edgecolor=plot_params["bar_edgecolor"])
-        plt.bar([i + width for i in x], distorteds, width=width, label="Distorted", color="red",
+        plt.bar([i + 0.5 * width for i in x], distorted, width=width, label="Distorted", color="red",
+                edgecolor=plot_params["bar_edgecolor"])
+        plt.bar([i + 1.5 * width for i in x], other, width=width, label="Other", color="orange",
                 edgecolor=plot_params["bar_edgecolor"])
 
         plt.xlabel("Digit Class", fontsize=plot_params["font_size"])
@@ -312,7 +317,7 @@ class DigitDatasetEvaluator:
             plt.ylabel("Frequency", fontsize=plot_params["font_size"])
             plt.legend(fontsize=plot_params["font_size"])
 
-            output_path = os.path.join(self.output_dir, "pixel_histogram.png")
+            output_path = os.path.join(self.output_dir, "step_4_pixel_histogram.png")
             plt.tight_layout()
             plt.savefig(output_path)
             plt.close()
@@ -419,7 +424,7 @@ class DigitDatasetEvaluator:
             plt.title("Digit Centering Heatmap (all digits)", fontsize=plot_params["font_size"])
 
             # Save plot
-            output_path = os.path.join(self.output_dir, "centering_heatmap.png")
+            output_path = os.path.join(self.output_dir, "step_6_centering_heatmap.png")
             plt.savefig(output_path, bbox_inches="tight")
             plt.close()
 
@@ -534,7 +539,7 @@ class DigitDatasetEvaluator:
         self.log("\n🔍 [Step 9] Detecting partial digits (those touching the image frame)...")
 
         os.makedirs(self.output_dir, exist_ok=True)
-        save_path = os.path.join(self.output_dir, "partial_digits_grid.png")
+        save_path = os.path.join(self.output_dir, "step_9_partial_digits_grid.png")
         partials: List[str] = []
         partials_by_digit: Dict[str, List[str]] = defaultdict(list)
 
@@ -1025,10 +1030,12 @@ class DigitDatasetEvaluator:
             distorted_pct = 100 * distorted / total if total > 0 else 0
             other_pct = 100 * other / total if total > 0 else 0
 
-            # Ensure 1 decimal place for percentages
             summary_rows.append({
                 "Digit": digit,
-                "Total": f"{total:,}",  # Format total with thousands separator
+                "Total": f"{total:,}",
+                "Clean": f"{clean:,}",
+                "Distorted": f"{distorted:,}",
+                "Other": f"{other:,}",
                 "Clean %": f"{clean_pct:.1f}",
                 "Distorted %": f"{distorted_pct:.1f}",
                 "Other %": f"{other_pct:.1f}",
@@ -1041,12 +1048,19 @@ class DigitDatasetEvaluator:
             other_all += other
 
         # Totals row
+        total_clean_pct = 100 * clean_all / total_all if total_all > 0 else 0
+        total_distorted_pct = 100 * distorted_all / total_all if total_all > 0 else 0
+        total_other_pct = 100 * other_all / total_all if total_all > 0 else 0
+
         summary_rows.append({
             "Digit": "Total",
-            "Total": f"{total_all:,}",  # Format total with thousands separator
-            "Clean %": f"{100 * clean_all / total_all:.1f}" if total_all > 0 else "0.0",
-            "Distorted %": f"{100 * distorted_all / total_all:.1f}" if total_all > 0 else "0.0",
-            "Other %": f"{100 * other_all / total_all:.1f}" if total_all > 0 else "0.0",
+            "Total": f"{total_all:,}",
+            "Clean": f"{clean_all:,}",
+            "Distorted": f"{distorted_all:,}",
+            "Other": f"{other_all:,}",
+            "Clean %": f"{total_clean_pct:.1f}",
+            "Distorted %": f"{total_distorted_pct:.1f}",
+            "Other %": f"{total_other_pct:.1f}",
             "Image Size": image_size
         })
 
@@ -1057,10 +1071,10 @@ class DigitDatasetEvaluator:
         df.to_csv(csv_path, index=False)
 
         # Save image with enhanced formatting
-        fig, ax = plt.subplots(figsize=(8, 0.1 * len(df) + 1.5))  # Adjust height based on row count
+        fig, ax = plt.subplots(figsize=(10, 0.1 * len(df) + 1.5))  # Wider to fit new columns
         ax.axis("off")
 
-        # Add title above the table
+        # Add title
         fig.text(0.5, 0.98, "Table 1. Dataset Summary", ha="center", va="top",
                  fontsize=13, weight="bold", color="black")
 
@@ -1523,6 +1537,11 @@ class DigitDatasetEvaluator:
 if __name__ == "__main__":
     evaluator = DigitDatasetEvaluator(dataset_path="digit_dataset")
     # evaluator.run_full_evaluation()
-    sobel_data, orb_data = evaluator.step_11_local_feature_consistency(samples_per_digit=10000)
-    evaluator.generate_table_5_feature_consistency(sobel_data, orb_data)
+    # sobel_data, orb_data = evaluator.step_11_local_feature_consistency(samples_per_digit=10000)
+    # evaluator.generate_table_5_feature_consistency(sobel_data, orb_data)
 
+    # _, all_duplicates_by_digit = evaluator.step_10_detect_duplicate_images()
+    # evaluator.generate_table_3_duplicate_summary(all_duplicates_by_digit)
+    class_stats = evaluator.step_1_class_distribution()
+    image_size = evaluator.step_2_check_image_dimensions()
+    evaluator.generate_table_1_dataset_summary(class_stats, image_size)
