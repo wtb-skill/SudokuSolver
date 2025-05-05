@@ -1,12 +1,36 @@
 🧪 Running dataset evaluation pipeline...
-Dataset path: digit_dataset
-Evaluation time: 2025-05-05 17:58:18.047782
+Dataset path: test_dataset
+Evaluation time: 2025-05-05 19:01:39.911701
 
 
-📈 [Step 4] Generating pixel intensity histograms...
-✅ [Step 4 Complete] Histogram saved as 'evaluation_reports\step_4_pixel_histogram.png'
+🔍 [Step 5] Scanning for corrupt images...
+✅ [Step 5] No corrupt images detected.
+✅ [Step 5 Complete] Corrupt image scan finished.
 
-📋 Generating Table 6: Pixel Intensity Summary...
-📄 Saved CSV → evaluation_reports\table_6_pixel_intensity_summary.csv
-📋 Saved table image → evaluation_reports\table_6_pixel_intensity_summary.png
-✅ [Table 6] Pixel Intensity Summary generated successfully.
+
+🔍 [Step 7] Detecting blurry images...
+[Step 7] Found 5498 blurry images (Laplacian var < 1500.0).
+ - test_dataset\1\clean_1.png | Laplacian variance: 1117.81
+ - test_dataset\1\clean_258.png | Laplacian variance: 1117.81
+ - test_dataset\1\clean_280.png | Laplacian variance: 1117.81
+ - test_dataset\1\distorted_0.png | Laplacian variance: 335.68
+ - test_dataset\1\distorted_10.png | Laplacian variance: 327.77
+ - test_dataset\1\distorted_100.png | Laplacian variance: 629.33
+ - test_dataset\1\distorted_101.png | Laplacian variance: 1418.57
+ - test_dataset\1\distorted_102.png | Laplacian variance: 438.92
+ - test_dataset\1\distorted_103.png | Laplacian variance: 558.74
+ - test_dataset\1\distorted_104.png | Laplacian variance: 807.69
+✅ [Step 7 Complete] Blurry image detection done.
+
+✅ [Step 7] Histogram saved as 'evaluation_reports\step_7_laplacian_variance_histogram.png'
+
+
+🔍 [Step 9] Detecting partial digits (those touching the image frame)...
+🖼️ [Step 9] Building composite image grid of partial digits...
+🟠 [Step 9] Found 1310 potentially partial digit images.
+✅ [Step 9 Complete] Composite image of partial digits saved as 'evaluation_reports\step_9_partial_digits_grid.png'
+
+📋 Generating Table 2: Image Quality Issues...
+📄 Saved CSV → evaluation_reports\table_2_image_quality_issues.csv
+📋 Saved table image → evaluation_reports\table_2_image_quality_issues.png
+✅ [Table 2] Image Quality Issues Summary generated successfully.

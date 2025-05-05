@@ -146,7 +146,7 @@ class DigitDatasetEvaluator:
         plt.legend(fontsize=plot_params["legend_font_size"], loc=plot_params["legend_loc"])
         plt.tight_layout()
 
-        save_path = os.path.join(self.output_dir, "class_distribution_histogram.png")
+        save_path = os.path.join(self.output_dir, "step_1_class_distribution_histogram.png")
         plt.savefig(save_path)
         plt.close()
 
@@ -209,7 +209,7 @@ class DigitDatasetEvaluator:
         plt.xticks(rotation=45, ha='right', fontsize=plot_params["font_size"])
         plt.tight_layout()
 
-        save_path: str = os.path.join(self.output_dir, "image_dimension_histogram.png")
+        save_path: str = os.path.join(self.output_dir, "step_2_image_dimension_histogram.png")
         plt.savefig(save_path)
         plt.close()
 
@@ -261,7 +261,7 @@ class DigitDatasetEvaluator:
 
         # Adjust layout to leave space for the title, then save the output
         plt.tight_layout(rect=[0, 0, 1, 0.97])  # Leave space for title
-        output_path = os.path.join(self.output_dir, "sample_grid.png")
+        output_path = os.path.join(self.output_dir, "step_3_sample_grid.png")
         plt.savefig(output_path, bbox_inches="tight")  # Save the image
         plt.close()
 
@@ -451,14 +451,9 @@ class DigitDatasetEvaluator:
         else:
             self.log("⚠️ [Step 6 Complete] No images found for centering heatmap.")
 
-    def step_7_detect_blurry_images(self, threshold: float = 100.0) -> List[Tuple[str, float]]:
+    def step_7_detect_blurry_images(self, threshold: float = 1500.0) -> List[Tuple[str, float]]:
         """
-        Detects blurry images using the variance of the Laplacian method.
-
-        This step:
-          - Calculates the Laplacian variance for each image, which is a measure of image sharpness.
-          - Flags images with a Laplacian variance below the specified threshold as blurry.
-          - Logs the results and provides a list of detected blurry images.
+        Detects blurry images using the variance of the Laplacian method and plots the Laplacian variance distribution.
 
         Args:
             threshold (float): The Laplacian variance threshold below which images will be considered blurry. Default is 100.0.
@@ -469,6 +464,8 @@ class DigitDatasetEvaluator:
         self.log("\n🔍 [Step 7] Detecting blurry images...")
 
         blurry_images: List[Tuple[str, float]] = []
+        lap_variances: List[float] = []  # Collecting Laplacian variance for each image
+
         all_images = [(digit, os.path.join(path, img))
                       for digit, path in self.digit_dirs.items()
                       for img in os.listdir(path)]
@@ -478,6 +475,7 @@ class DigitDatasetEvaluator:
                 img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
                 if img is not None:
                     lap_var = cv2.Laplacian(img, cv2.CV_64F).var()
+                    lap_variances.append(lap_var)  # Store Laplacian variance for plotting
                     if lap_var < threshold:
                         blurry_images.append((img_path, lap_var))
                 bar.update(1)
@@ -487,6 +485,34 @@ class DigitDatasetEvaluator:
             self.log(f" - {img_path} | Laplacian variance: {score:.2f}")
 
         self.log("✅ [Step 7 Complete] Blurry image detection done.\n")
+
+        # Plot the histogram similar to Step 4
+        plot_params = self.get_plot_params()
+
+        with tqdm(total=1, desc="📊 Plotting & Saving", unit="task") as pbar:
+            plt.figure(figsize=(plot_params["figsize"][0], plot_params["figsize"][1]))
+
+            # Plot histogram of Laplacian variance
+            plt.hist(lap_variances, bins=50, alpha=0.6, label="Laplacian Variance",
+                     color=plot_params["distorted_color"])
+
+            # Plot a threshold line for blurry images
+            plt.axvline(x=threshold, color='red', linestyle='dashed', linewidth=2, label=f'Threshold: {threshold}')
+
+            # Add title and labels
+            plt.title("Laplacian Variance Distribution (Blurry Image Detection)", fontsize=plot_params["font_size"])
+            plt.xlabel("Laplacian Variance", fontsize=plot_params["font_size"])
+            plt.ylabel("Frequency", fontsize=plot_params["font_size"])
+            plt.legend(fontsize=plot_params["legend_font_size"], loc=plot_params["legend_loc"])
+
+            # Save the plot
+            output_path = os.path.join(self.output_dir, "step_7_laplacian_variance_histogram.png")
+            plt.tight_layout()
+            plt.savefig(output_path)
+            plt.close()
+            pbar.update(1)
+
+        self.log(f"✅ [Step 7] Histogram saved as '{output_path}'\n")
 
         return blurry_images
 
@@ -738,7 +764,7 @@ class DigitDatasetEvaluator:
         final_image = self._concatenate_3x3_grid(digit_visuals)
 
         # 5. Save grid using matplotlib with styled title
-        grid_path = os.path.join(self.output_dir, "duplicate_images_grid.png")
+        grid_path = os.path.join(self.output_dir, "step_10_duplicate_images_grid.png")
         plot_params = self.get_plot_params()
 
         fig, ax = plt.subplots(figsize=plot_params["figsize"])
@@ -765,7 +791,7 @@ class DigitDatasetEvaluator:
         plt.xticks(range(1, 10))
         plt.tight_layout()
 
-        hist_path = os.path.join(self.output_dir, "duplicate_group_histogram.png")
+        hist_path = os.path.join(self.output_dir, "step_10_duplicate_group_histogram.png")
         plt.savefig(hist_path)
         plt.close()
         self.log(f"📊 Saved histogram of duplicate groups per digit → {hist_path}\n")
@@ -894,7 +920,7 @@ class DigitDatasetEvaluator:
             cbar_ax = sobel_fig.add_axes([0.9, 0.15, 0.02, 0.7])
             sobel_fig.colorbar(final_imshow_sobel, cax=cbar_ax, label="Feature Intensity (Sobel)")
             sobel_fig.suptitle("Local Feature Consistency (Sobel)", fontsize=self.plot_params["font_size"] + 4)
-            sobel_path = os.path.join(self.output_dir, "local_feature_consistency_sobel.png")
+            sobel_path = os.path.join(self.output_dir, "step_11_local_feature_consistency_sobel.png")
             sobel_fig.savefig(sobel_path, bbox_inches="tight")
             plt.close(sobel_fig)
 
@@ -904,7 +930,7 @@ class DigitDatasetEvaluator:
             cbar_ax = orb_fig.add_axes([0.9, 0.15, 0.02, 0.7])
             orb_fig.colorbar(final_imshow_orb, cax=cbar_ax, label="Feature Intensity (ORB)")
             orb_fig.suptitle("Local Feature Consistency (ORB)", fontsize=self.plot_params["font_size"] + 4)
-            orb_path = os.path.join(self.output_dir, "local_feature_consistency_orb.png")
+            orb_path = os.path.join(self.output_dir, "step_11_local_feature_consistency_orb.png")
             orb_fig.savefig(orb_path, bbox_inches="tight")
             plt.close(orb_fig)
 
@@ -991,7 +1017,7 @@ class DigitDatasetEvaluator:
             fig.colorbar(reference_im, cax=cbar_ax, label="Normalized Intensity")
 
         # Save the figure
-        output_path = os.path.join(self.output_dir, "digit_heatmap_grid.png")
+        output_path = os.path.join(self.output_dir, "step_12_digit_heatmap_grid.png")
         plt.savefig(output_path, bbox_inches='tight')
         plt.close()
 
@@ -1653,8 +1679,8 @@ class DigitDatasetEvaluator:
 
 
 if __name__ == "__main__":
-    evaluator = DigitDatasetEvaluator(dataset_path="digit_dataset")
-    evaluator.run_full_evaluation([4])
+    evaluator = DigitDatasetEvaluator(dataset_path="test_dataset")
+    evaluator.run_full_evaluation("5, 7, 9")
 
 
 
