@@ -3,6 +3,7 @@ import cv2
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.stats import skew, kurtosis
 from collections import defaultdict
 from typing import List, Dict, Optional, Tuple
 import random
@@ -52,6 +53,7 @@ class DigitDatasetEvaluator:
             "color_map": 'hot',            # Default colormap for heatmaps
             "clean_color": "green",
             "distorted_color": "red",
+            "other_color": "orange",
             "grid_color": '#cccccc',       # Grid line color in plots
             "legend_font_size": 12,        # Font size for legend
             "legend_loc": 'best'           # Location of the legend in plots
@@ -81,23 +83,18 @@ class DigitDatasetEvaluator:
 
     def step_1_class_distribution(self) -> Dict[str, Dict[str, int]]:
         """
-        Analyzes and logs the distribution of clean vs distorted images per digit class.
-
-        This step:
-          - Counts total, clean, and distorted images for each digit (1–9).
-          - Saves a grouped bar chart comparing these counts across digits.
-          - Logs the results and returns a summary dictionary.
+        Analyzes and logs the distribution of clean, distorted, and other images per digit class.
 
         Returns:
-            Dict[str, Dict[str, int]]: A nested dictionary where keys are digit strings ('1'–'9'),
-            and values are dictionaries containing counts for 'total', 'clean', and 'distorted' images.
+            Dict[str, Dict[str, int]]: A nested dictionary with per-digit counts for 'total', 'clean',
+            'distorted', and 'other' image types.
         """
         self.log("\n📊 [Step 1] Starting class distribution analysis...")
         summary: Dict[str, Dict[str, int]] = {}
 
-        # Retrieve the plot parameters (font size, colors, etc.)
         plot_params = self.get_plot_params()
 
+        # Aggregate stats
         for digit, path in self.digit_dirs.items():
             if not os.path.exists(path):
                 continue
@@ -114,29 +111,37 @@ class DigitDatasetEvaluator:
                 "other": other
             }
 
-        # 📊 Generate grouped bar chart
+        # Determine which categories are present
+        has_other = any(s["other"] > 0 for s in summary.values())
+        has_distorted = any(s["distorted"] > 0 for s in summary.values())
+
+        # Define category plotting order dynamically
+        categories = [("clean", plot_params["clean_color"]),
+                      ("distorted", plot_params["distorted_color"]) if has_distorted else None,
+                      ("other", plot_params["other_color"]) if has_other else None]
+        categories = [c for c in categories if c is not None]
+
+        num_categories = len(categories)
+        width = 0.8 / (num_categories + 1)
+
         digits = sorted(summary.keys(), key=int)
-        totals = [summary[d]["total"] for d in digits]
-        clean = [summary[d]["clean"] for d in digits]
-        distorted = [summary[d]["distorted"] for d in digits]
-        other = [summary[d]["other"] for d in digits]
+        x = list(range(len(digits)))
 
-        x = range(len(digits))
-        width = 0.3
-
+        # Plot
         plt.figure(figsize=plot_params["figsize"])
-        plt.bar([i - 1.5 * width for i in x], totals, width=width, label="Total", color="gray",
-                edgecolor=plot_params["bar_edgecolor"])
-        plt.bar([i - 0.5 * width for i in x], clean, width=width, label="Clean", color=plot_params["bar_color"],
-                edgecolor=plot_params["bar_edgecolor"])
-        plt.bar([i + 0.5 * width for i in x], distorted, width=width, label="Distorted", color="red",
-                edgecolor=plot_params["bar_edgecolor"])
-        plt.bar([i + 1.5 * width for i in x], other, width=width, label="Other", color="orange",
-                edgecolor=plot_params["bar_edgecolor"])
+        for i, (label, color) in enumerate(categories):
+            values = [summary[d][label] for d in digits]
+            offset = (i - (num_categories - 1) / 2) * width * 1.5  # spread bars
+            plt.bar([xi + offset for xi in x], values, width=width,
+                    label=label.capitalize(), color=color, edgecolor=plot_params["bar_edgecolor"])
+
+        # Total as baseline (optional, can be removed if cluttered)
+        totals = [summary[d]["total"] for d in digits]
+        plt.plot(x, totals, color="gray", linestyle="--", label="Total")
 
         plt.xlabel("Digit Class", fontsize=plot_params["font_size"])
         plt.ylabel("Number of Images", fontsize=plot_params["font_size"])
-        plt.title("Image Distribution per Digit (Total / Clean / Distorted)", fontsize=plot_params["font_size"])
+        plt.title("Image Distribution per Digit", fontsize=plot_params["font_size"])
         plt.xticks(x, digits, fontsize=plot_params["font_size"])
         plt.legend(fontsize=plot_params["legend_font_size"], loc=plot_params["legend_loc"])
         plt.tight_layout()
@@ -262,34 +267,40 @@ class DigitDatasetEvaluator:
 
         self.log(f"✅ [Step 3 Complete] Sample image grid saved as '{output_path}'\n")
 
-    def step_4_intensity_histograms(self, sample_size: int = 1000) -> None:
+    def step_4_intensity_histograms(self, sample_size: int = 1000) -> Dict[str, List[int]]:
         """
-        Plots histograms of pixel intensity values for clean and distorted images.
+        Plots histograms of pixel intensity values for clean, distorted, and other images.
 
         This step:
           - Loads a sample of images from each digit class.
-          - Separates the pixels into clean and distorted categories based on the image filenames.
-          - Plots the pixel intensity distributions for clean and distorted images and saves the plot.
+          - Separates the pixels into clean, distorted, and other categories based on the image filenames.
+          - Plots the pixel intensity distributions and saves the histogram image.
+          - Returns the raw pixel data for each category.
 
         Args:
-            sample_size (int): The number of images to sample from each digit class for the histogram. Default is 1000.
+            sample_size (int): Number of images to sample per digit class.
 
         Returns:
-            None
+            Dict[str, List[int]]: Dictionary with keys 'clean', 'distorted', and 'other' mapping to their pixel intensities.
         """
         self.log("\n📈 [Step 4] Generating pixel intensity histograms...")
 
-        # Get visual parameters from the class (e.g., font size, color, etc.)
         plot_params = self.get_plot_params()
 
-        clean_pixels, distorted_pixels = [], []
+        # Containers for each group
+        pixel_data = {
+            "clean": [],
+            "distorted": [],
+            "other": []
+        }
+
         total_images = sum(
             min(sample_size, len(os.listdir(path)))
             for path in self.digit_dirs.values()
             if os.path.exists(path)
         )
 
-        # Load and process images
+        # Load and classify pixels
         with tqdm(total=total_images, desc="🔍 Loading images", unit="img") as pbar:
             for digit, path in self.digit_dirs.items():
                 if not os.path.exists(path):
@@ -300,22 +311,28 @@ class DigitDatasetEvaluator:
                     full_path = os.path.join(path, img_name)
                     img = cv2.imread(full_path, cv2.IMREAD_GRAYSCALE)
                     if img is not None:
+                        flat = img.flatten()
                         if "clean" in img_name:
-                            clean_pixels.extend(img.flatten())
+                            pixel_data["clean"].extend(flat)
+                        elif "distorted" in img_name:
+                            pixel_data["distorted"].extend(flat)
                         else:
-                            distorted_pixels.extend(img.flatten())
+                            pixel_data["other"].extend(flat)
                     pbar.update(1)
 
-        # Plot histograms for clean and distorted images
+        # Plot
         with tqdm(total=1, desc="📊 Plotting & Saving", unit="task") as pbar:
             plt.figure(figsize=(plot_params["figsize"][0], plot_params["figsize"][1]))
-            plt.hist(clean_pixels, bins=50, alpha=0.6, label="Clean", color=plot_params["clean_color"])
-            plt.hist(distorted_pixels, bins=50, alpha=0.6, label="Distorted", color=plot_params["distorted_color"])
+            plt.hist(pixel_data["clean"], bins=50, alpha=0.6, label="Clean", color=plot_params["clean_color"])
+            plt.hist(pixel_data["distorted"], bins=50, alpha=0.6, label="Distorted",
+                     color=plot_params["distorted_color"])
+            plt.hist(pixel_data["other"], bins=50, alpha=0.6, label="Other",
+                     color=plot_params["other_color"])
 
             plt.title("Pixel Intensity Histogram", fontsize=plot_params["font_size"])
             plt.xlabel("Pixel Value", fontsize=plot_params["font_size"])
             plt.ylabel("Frequency", fontsize=plot_params["font_size"])
-            plt.legend(fontsize=plot_params["font_size"])
+            plt.legend(fontsize=plot_params["legend_font_size"], loc=plot_params["legend_loc"])
 
             output_path = os.path.join(self.output_dir, "step_4_pixel_histogram.png")
             plt.tight_layout()
@@ -324,6 +341,8 @@ class DigitDatasetEvaluator:
             pbar.update(1)
 
         self.log(f"✅ [Step 4 Complete] Histogram saved as '{output_path}'\n")
+
+        return pixel_data
 
     def step_5_detect_corrupt_images(self) -> List[str]:
         """
@@ -1474,59 +1493,158 @@ class DigitDatasetEvaluator:
         self.log(f"📋 Saved table image → {image_path}")
         self.log("✅ [Table 5] Feature Consistency (Sobel & ORB) generated successfully.\n")
 
-    def run_full_evaluation(self) -> None:
+    def generate_table_6_pixel_intensity_summary(
+            self,
+            pixel_data: Dict[str, List[int]]
+    ) -> None:
+        self.log("📋 Generating Table 6: Pixel Intensity Summary...")
+
+        rows = []
+
+        for category in ["clean", "distorted", "other"]:
+            pixels = pixel_data.get(category, [])
+            count = len(pixels)
+            mean = np.mean(pixels) if pixels else 0
+            std = np.std(pixels) if pixels else 0
+            median = np.median(pixels) if pixels else 0
+            min_val = np.min(pixels) if pixels else 0
+            max_val = np.max(pixels) if pixels else 0
+            percent_black = np.sum(np.array(pixels) == 0) / count * 100 if pixels else 0
+            percent_white = np.sum(np.array(pixels) == 255) / count * 100 if pixels else 0
+            skewness = skew(pixels) if len(pixels) > 1 else 0
+            kurt = kurtosis(pixels) if len(pixels) > 1 else 0
+
+            rows.append([
+                category.capitalize(),
+                f"{count:,}",
+                f"{mean:.2f}",
+                f"{median:.2f}",
+                f"{std:.2f}",
+                f"{min_val}",
+                f"{max_val}",
+                f"{percent_black:.2f}%",
+                f"{percent_white:.2f}%",
+                f"{skewness:.2f}",
+                f"{kurt:.2f}"
+            ])
+
+        df = pd.DataFrame(rows, columns=[
+            "Category", "Pixel Count", "Mean Intensity", "Median Intensity", "Std Dev",
+            "Min Intensity", "Max Intensity", "% Black (0)", "% White (255)", "Skewness", "Kurtosis"
+        ])
+
+        # Save CSV
+        csv_path = os.path.join(self.output_dir, "table_6_pixel_intensity_summary.csv")
+        df.to_csv(csv_path, index=False)
+
+        # Compact layout for image
+        fig, ax = plt.subplots(figsize=(8, 0.4 * len(df)))  # tighter vertical sizing
+        ax.axis("off")
+
+        fig.text(0.5, 1.02, "Table 6. Pixel Intensity Summary", ha="center", va="top",
+                 fontsize=12, weight="bold", color="black")
+
+        table = ax.table(
+            cellText=df.values,
+            colLabels=df.columns,
+            cellLoc="center",
+            loc="center",
+            colColours=["#add8e6"] * len(df.columns),
+        )
+
+        self.apply_alternating_row_colors(table)
+
+        for (row, col), cell in table.get_celld().items():
+            cell.set_fontsize(9)
+            if row == 0:
+                cell.set_text_props(weight="bold", color="black")
+            cell.set_height(0.2)  # more compact row height
+
+        plt.subplots_adjust(left=0.05, right=0.95, top=0.92, bottom=0.02)
+        image_path = os.path.join(self.output_dir, "table_6_pixel_intensity_summary.png")
+        plt.savefig(image_path, bbox_inches="tight", dpi=150, pad_inches=0)
+        plt.close()
+
+        self.log(f"📄 Saved CSV → {csv_path}")
+        self.log(f"📋 Saved table image → {image_path}")
+        self.log("✅ [Table 6] Pixel Intensity Summary generated successfully.\n")
+
+    def run_full_evaluation(self, steps_to_run="all") -> None:
         """
-        Runs the complete dataset evaluation pipeline and generates various diagnostic reports.
+        Runs the complete or partial dataset evaluation pipeline and generates diagnostic reports.
 
-        This method sequentially performs multiple analyses on the dataset to assess:
-            - Class distribution balance.
-            - Image size consistency.
-            - Visual inspection via sample grid.
-            - Intensity histogram statistics.
-            - Detection of corrupt, blurry, or partially visible digits.
-            - Heatmap analysis for digit centering.
-            - Feature consistency across digits using Sobel and ORB methods.
-            - Duplicate image detection.
-            - Dataset diversity analysis.
-            - Aggregated metrics into summary tables.
-
-        Artifacts generated include:
-            - PNG visualizations (e.g., heatmaps, histograms, grids).
-            - CSV tables with numerical results.
-            - A compiled textual report saved in the output directory.
-
-        The final report consolidates all findings and helps evaluate the dataset’s quality and reliability
-        before use in model training or benchmarking.
+        Args:
+            steps_to_run (Union[str, List[int]]):
+                - "all" to run every step.
+                - A list of step numbers (1-12) to run specific steps.
+                  Example: [1, 2, 5] or "1,2,5"
 
         Returns:
             None
         """
-        self.log("🧪 Running full dataset evaluation pipeline...")
+        self.log("🧪 Running dataset evaluation pipeline...")
         self.log(f"Dataset path: {self.dataset_path}")
         self.log(f"Evaluation time: {datetime.datetime.now()}\n")
 
-        # Step-wise pipeline
-        class_stats = self.step_1_class_distribution()
-        image_size = self.step_2_check_image_dimensions()
-        self.step_3_visualize_sample_grid()
-        self.step_4_intensity_histograms()
-        corrupt_paths = self.step_5_detect_corrupt_images()
-        self.step_6_digit_centering_heatmap()
-        blurry_images = self.step_7_detect_blurry_images()
-        diversity_data = self.step_8_estimate_dataset_diversity()
-        partial_paths = self.step_9_detect_partial_digits()
-        _, all_duplicates_by_digit = self.step_10_detect_duplicate_images()
-        sobel_data, orb_data = self.step_11_local_feature_consistency(samples_per_digit=10000)
-        self.step_12_digit_heatmap_grid()
+        # Parse string inputs
+        if isinstance(steps_to_run, str):
+            if steps_to_run.strip().lower() == "all":
+                steps_to_run = list(range(1, 13))
+            else:
+                steps_to_run = [int(s.strip()) for s in steps_to_run.split(",")]
 
-        # Table/report generation
-        self.generate_table_1_dataset_summary(class_stats, image_size)
-        self.generate_table_2_image_quality_issues(corrupt_paths, blurry_images, partial_paths)
-        self.generate_table_3_duplicate_summary(all_duplicates_by_digit)
-        self.generate_table_4_dataset_diversity(diversity_data)
-        self.generate_table_5_feature_consistency(sobel_data, orb_data)
+        # Tracking outputs from steps needed by tables
+        class_stats = None
+        image_size = None
+        corrupt_paths = []
+        blurry_images = []
+        partial_paths = []
+        diversity_data = None
+        sobel_data = None
+        orb_data = None
+        all_duplicates_by_digit = None
 
-        # Save the final text report
+        # Step-wise execution
+        if 1 in steps_to_run:
+            class_stats = self.step_1_class_distribution()
+        if 2 in steps_to_run:
+            image_size = self.step_2_check_image_dimensions()
+        if 3 in steps_to_run:
+            self.step_3_visualize_sample_grid()
+        if 4 in steps_to_run:
+            pixel_data = self.step_4_intensity_histograms(sample_size=10000)
+        if 5 in steps_to_run:
+            corrupt_paths = self.step_5_detect_corrupt_images()
+        if 6 in steps_to_run:
+            self.step_6_digit_centering_heatmap()
+        if 7 in steps_to_run:
+            blurry_images = self.step_7_detect_blurry_images()
+        if 8 in steps_to_run:
+            diversity_data = self.step_8_estimate_dataset_diversity()
+        if 9 in steps_to_run:
+            partial_paths = self.step_9_detect_partial_digits()
+        if 10 in steps_to_run:
+            _, all_duplicates_by_digit = self.step_10_detect_duplicate_images()
+        if 11 in steps_to_run:
+            sobel_data, orb_data = self.step_11_local_feature_consistency(samples_per_digit=10000)
+        if 12 in steps_to_run:
+            self.step_12_digit_heatmap_grid()
+
+        # Table/report generation if required data is present
+        if 1 in steps_to_run and 2 in steps_to_run:
+            self.generate_table_1_dataset_summary(class_stats, image_size)
+        if 4 in steps_to_run:
+            self.generate_table_6_pixel_intensity_summary(pixel_data)
+        if 5 in steps_to_run and 7 in steps_to_run and 9 in steps_to_run:
+            self.generate_table_2_image_quality_issues(corrupt_paths, blurry_images, partial_paths)
+        if 8 in steps_to_run:
+            self.generate_table_4_dataset_diversity(diversity_data)
+        if 10 in steps_to_run:
+            self.generate_table_3_duplicate_summary(all_duplicates_by_digit)
+        if 11 in steps_to_run:
+            self.generate_table_5_feature_consistency(sobel_data, orb_data)
+
+        # Save final textual report
         report_path = os.path.join(self.output_dir, "dataset_evaluation_report.txt")
         with open(report_path, "w", encoding="utf-8") as f:
             f.write("\n".join(self.report_lines))
@@ -1536,12 +1654,7 @@ class DigitDatasetEvaluator:
 
 if __name__ == "__main__":
     evaluator = DigitDatasetEvaluator(dataset_path="digit_dataset")
-    # evaluator.run_full_evaluation()
-    # sobel_data, orb_data = evaluator.step_11_local_feature_consistency(samples_per_digit=10000)
-    # evaluator.generate_table_5_feature_consistency(sobel_data, orb_data)
+    evaluator.run_full_evaluation([4])
 
-    # _, all_duplicates_by_digit = evaluator.step_10_detect_duplicate_images()
-    # evaluator.generate_table_3_duplicate_summary(all_duplicates_by_digit)
-    class_stats = evaluator.step_1_class_distribution()
-    image_size = evaluator.step_2_check_image_dimensions()
-    evaluator.generate_table_1_dataset_summary(class_stats, image_size)
+
+
