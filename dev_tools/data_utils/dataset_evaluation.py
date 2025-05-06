@@ -267,7 +267,7 @@ class DigitDatasetEvaluator:
 
         self.log(f"✅ [Step 3 Complete] Sample image grid saved as '{output_path}'\n")
 
-    def step_4_intensity_histograms(self, sample_size: int = 1000) -> Dict[str, List[int]]:
+    def step_4_intensity_histograms(self, sample_size: int = 10000) -> Dict[str, List[int]]:
         """
         Plots histograms of pixel intensity values for clean, distorted, and other images.
 
@@ -388,7 +388,7 @@ class DigitDatasetEvaluator:
         self.log("✅ [Step 5 Complete] Corrupt image scan finished.\n")
         return corrupt
 
-    def step_6_digit_centering_heatmap(self, samples_per_digit: int = 100) -> None:
+    def step_6_digit_centering_heatmap(self, samples_per_digit: int = 10000) -> None:
         """
         Creates a heatmap to visualize the average centering of digits across the dataset.
 
@@ -820,7 +820,7 @@ class DigitDatasetEvaluator:
             rows.append(cv2.hconcat(row_imgs))
         return cv2.vconcat(rows)
 
-    def step_11_local_feature_consistency(self, samples_per_digit: int = 500) -> Tuple[
+    def step_11_local_feature_consistency(self, samples_per_digit: int = 10000) -> Tuple[
         List[Dict[str, Union[str, float, int]]], List[Dict[str, Union[str, float, int]]]]:
         """
         Analyzes local feature consistency across digits using both Sobel edges and ORB keypoints.
@@ -1679,8 +1679,8 @@ class DigitDatasetEvaluator:
 
 
 if __name__ == "__main__":
-    evaluator = DigitDatasetEvaluator(dataset_path="test_dataset")
-    evaluator.run_full_evaluation("5, 7, 9")
+    evaluator = DigitDatasetEvaluator(dataset_path="digit_dataset")
+    evaluator.run_full_evaluation("all")
 
 
 

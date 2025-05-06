@@ -1,6 +1,26 @@
 🧪 Running dataset evaluation pipeline...
-Dataset path: test_dataset
-Evaluation time: 2025-05-05 19:01:39.911701
+Dataset path: digit_dataset
+Evaluation time: 2025-05-05 23:57:53.926290
+
+
+📊 [Step 1] Starting class distribution analysis...
+📊 [Step 1] Saved class distribution histogram → evaluation_reports\step_1_class_distribution_histogram.png
+✅ [Step 1 Complete] Class distribution analysis done.
+
+
+📏 [Step 2] Checking image dimensions...
+[Step 2] Found 1 unique image sizes.
+[Step 2] Size (32, 32): 90000 images. Examples: ['digit_dataset\\1\\clean_0.png', 'digit_dataset\\1\\clean_1.png', 'digit_dataset\\1\\clean_10.png']
+📊 [Step 2] Saved image dimension histogram → evaluation_reports\step_2_image_dimension_histogram.png
+✅ [Step 2 Complete] Image dimension check done.
+
+
+🖼️ [Step 3] Generating sample grid visualization...
+✅ [Step 3 Complete] Sample image grid saved as 'evaluation_reports\step_3_sample_grid.png'
+
+
+📈 [Step 4] Generating pixel intensity histograms...
+✅ [Step 4 Complete] Histogram saved as 'evaluation_reports\step_4_pixel_histogram.png'
 
 
 🔍 [Step 5] Scanning for corrupt images...
@@ -8,29 +28,77 @@ Evaluation time: 2025-05-05 19:01:39.911701
 ✅ [Step 5 Complete] Corrupt image scan finished.
 
 
+🔥 [Step 6] Generating digit centering heatmap...
+✅ [Step 6 Complete] Digit centering heatmap saved as 'evaluation_reports\step_6_centering_heatmap.png'
+
+
 🔍 [Step 7] Detecting blurry images...
-[Step 7] Found 5498 blurry images (Laplacian var < 1500.0).
- - test_dataset\1\clean_1.png | Laplacian variance: 1117.81
- - test_dataset\1\clean_258.png | Laplacian variance: 1117.81
- - test_dataset\1\clean_280.png | Laplacian variance: 1117.81
- - test_dataset\1\distorted_0.png | Laplacian variance: 335.68
- - test_dataset\1\distorted_10.png | Laplacian variance: 327.77
- - test_dataset\1\distorted_100.png | Laplacian variance: 629.33
- - test_dataset\1\distorted_101.png | Laplacian variance: 1418.57
- - test_dataset\1\distorted_102.png | Laplacian variance: 438.92
- - test_dataset\1\distorted_103.png | Laplacian variance: 558.74
- - test_dataset\1\distorted_104.png | Laplacian variance: 807.69
+[Step 7] Found 54818 blurry images (Laplacian var < 1500.0).
+ - digit_dataset\1\clean_1066.png | Laplacian variance: 1117.81
+ - digit_dataset\1\clean_12.png | Laplacian variance: 1117.81
+ - digit_dataset\1\clean_123.png | Laplacian variance: 1117.81
+ - digit_dataset\1\clean_1309.png | Laplacian variance: 1117.81
+ - digit_dataset\1\clean_1333.png | Laplacian variance: 1117.81
+ - digit_dataset\1\clean_1364.png | Laplacian variance: 1117.81
+ - digit_dataset\1\clean_1480.png | Laplacian variance: 1117.81
+ - digit_dataset\1\clean_1612.png | Laplacian variance: 1117.81
+ - digit_dataset\1\clean_1896.png | Laplacian variance: 1117.81
+ - digit_dataset\1\clean_1976.png | Laplacian variance: 1117.81
 ✅ [Step 7 Complete] Blurry image detection done.
 
 ✅ [Step 7] Histogram saved as 'evaluation_reports\step_7_laplacian_variance_histogram.png'
 
 
+🌈 [Step 8] Estimating dataset diversity (phash distance)...
+✅ [Step 8 Complete] Dataset diversity estimation done.
+
+
 🔍 [Step 9] Detecting partial digits (those touching the image frame)...
 🖼️ [Step 9] Building composite image grid of partial digits...
-🟠 [Step 9] Found 1310 potentially partial digit images.
+🟠 [Step 9] Found 12839 potentially partial digit images.
 ✅ [Step 9 Complete] Composite image of partial digits saved as 'evaluation_reports\step_9_partial_digits_grid.png'
+
+
+🔍 [Step 10] Detecting duplicate or near-duplicate images within each digit class...
+✅ [Step 10 Complete] Saved composite image of duplicate digits → evaluation_reports\step_10_duplicate_images_grid.png
+📊 Saved histogram of duplicate groups per digit → evaluation_reports\step_10_duplicate_group_histogram.png
+
+
+🔍 [Step 11] Checking local feature consistency using Sobel and ORB methods...
+✅ [Step 11 Complete] Sobel map saved: evaluation_reports\step_11_local_feature_consistency_sobel.png
+✅ [Step 11 Complete] ORB map saved: evaluation_reports\step_11_local_feature_consistency_orb.png
+
+
+🔥 [Step 12] Generating per-digit heatmap grid (1–9)...
+🖼️ [Step 12] Saved heatmap grid → evaluation_reports\step_12_digit_heatmap_grid.png
+✅ [Step 12 Complete] Digit heatmap grid generated.
+
+📋 Generating Table 1: Dataset Summary...
+📄 Saved CSV → evaluation_reports\table_1_dataset_summary.csv
+📋 Saved table image → evaluation_reports\table_1_dataset_summary.png
+✅ [Table 1] Dataset Summary... generated successfully.
+
+📋 Generating Table 6: Pixel Intensity Summary...
+📄 Saved CSV → evaluation_reports\table_6_pixel_intensity_summary.csv
+📋 Saved table image → evaluation_reports\table_6_pixel_intensity_summary.png
+✅ [Table 6] Pixel Intensity Summary generated successfully.
 
 📋 Generating Table 2: Image Quality Issues...
 📄 Saved CSV → evaluation_reports\table_2_image_quality_issues.csv
 📋 Saved table image → evaluation_reports\table_2_image_quality_issues.png
 ✅ [Table 2] Image Quality Issues Summary generated successfully.
+
+📋 Generating Table 4: Dataset Diversity...
+📄 Saved CSV → evaluation_reports\table_4_dataset_diversity.csv
+📋 Saved table image → evaluation_reports\table_4_dataset_diversity.png
+✅ [Table 4] Dataset Diversity generated successfully.
+
+📋 Generating Table 3: Duplicate Image Summary...
+📄 Saved CSV → evaluation_reports\table_3_duplicate_summary.csv
+📋 Saved table image → evaluation_reports\table_3_duplicate_summary.png
+✅ [Table 3] Duplicate Image Summary generated successfully.
+
+📋 Generating Table 5: Feature Consistency (Sobel & ORB)...
+📄 Saved CSV → evaluation_reports\table_5_feature_consistency.csv
+📋 Saved table image → evaluation_reports\table_5_feature_consistency.png
+✅ [Table 5] Feature Consistency (Sobel & ORB) generated successfully.
