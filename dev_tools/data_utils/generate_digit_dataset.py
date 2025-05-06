@@ -122,7 +122,7 @@ class DigitDatasetGenerator:
         if valid_kernel_sizes:
             kernel_size = random.choice(valid_kernel_sizes)
             # if kernel_size > 1:  # Skip if kernel is 1 (no blur effect)
-            #     img_np = cv2.GaussianBlur(img_np, (kernel_size, kernel_size), 0)
+            img_np = cv2.GaussianBlur(img_np, (kernel_size, kernel_size), 0)
 
         return img_np
 
