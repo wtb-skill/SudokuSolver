@@ -12,7 +12,7 @@ class DigitDatasetGenerator:
         image_size: int = 32,
         output_dir: str = "digit_dataset",
         num_samples: int = 100,
-        blur_level: float = 2, # right now possible kernel sizes: 1, 3, 5, 7, 9
+        blur_level: int = 11, # right now possible kernel sizes: 1, 3, 5, 7, 9
         shift_range: float = 1,
         rotation_range: int = 10,
         noise_level: int = 10,
@@ -26,7 +26,7 @@ class DigitDatasetGenerator:
             image_size (int): Size of each generated image (square).
             output_dir (str): Directory where images will be saved.
             num_samples (int): Number of images per digit to generate.
-            blur_level (float): Maximum Gaussian blur strength.
+            blur_level (int): Maximum Gaussian blur strength.
             shift_range (float): Max pixel shift in x/y direction.
             rotation_range (int): Max rotation angle in degrees.
             noise_level (int): Intensity of added random noise.
@@ -36,7 +36,7 @@ class DigitDatasetGenerator:
         self.image_size: int = image_size
         self.output_dir: str = output_dir
         self.num_samples: int = num_samples
-        self.blur_level: float = blur_level
+        self.blur_level: int = blur_level
         self.shift_range: float = shift_range
         self.rotation_range: int = rotation_range
         self.noise_level: int = noise_level
@@ -99,14 +99,16 @@ class DigitDatasetGenerator:
 
     def apply_blur(self, img_np: np.ndarray) -> np.ndarray:
         """
-        Applies Gaussian blur to the image.
-            | Kernel Size | % of `blur_strength` range |
-            | ----------- | -------------------------- |
-            | 1 (no blur) | 20% (from 0.0–0.4)         |
-            | 3 (Mild)    | 20% (0.4–0.8)              |
-            | 5 (Mild)    | 20% (0.8–1.2)              |
-            | 7 (Moderate)| 20% (1.2–1.6)              |
-            | 9 (Strong)  | 20% (1.6–2.0)              |
+        Applies Gaussian blur to the image using a randomly selected odd kernel size
+        up to the specified blur level.
+
+            | Kernel Size  | %of `blur_strength`    range |
+            | ------------ | --------------------------   |
+            | 1 (no blur)  | 20 % (from 0.0–0.4)          |
+            | 3 (Mild)     | 20 % (0.4–0.8)               |
+            | 5 (Mild)     | 20 % (0.8–1.2)               |
+            | 7 (Moderate) | 20 % (1.2–1.6)               |
+            | 9 (Strong)   | 20 % (1.6–2.0)               |
 
         Parameters:
             img_np (np.ndarray): Input image.
@@ -114,11 +116,14 @@ class DigitDatasetGenerator:
         Returns:
             np.ndarray: Blurred image.
         """
-        blur_strength = random.uniform(0.0, self.blur_level)
-        if blur_strength > 0:
-            kernel_size = int(blur_strength * 5) + 1
-            kernel_size += 1 if kernel_size % 2 == 0 else 0 # Kernel size must be odd for cv2.GaussianBlur.
-            img_np = cv2.GaussianBlur(img_np, (kernel_size, kernel_size), 0)
+        max_kernel = int(self.blur_level)
+        valid_kernel_sizes = [k for k in range(1, max_kernel + 1, 2)]
+
+        if valid_kernel_sizes:
+            kernel_size = random.choice(valid_kernel_sizes)
+            # if kernel_size > 1:  # Skip if kernel is 1 (no blur effect)
+            #     img_np = cv2.GaussianBlur(img_np, (kernel_size, kernel_size), 0)
+
         return img_np
 
     @staticmethod
