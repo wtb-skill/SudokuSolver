@@ -12,7 +12,7 @@ class DigitDatasetGenerator:
         image_size: int = 32,
         output_dir: str = "digit_dataset",
         num_samples: int = 100,
-        blur_level: int = 11, # right now possible kernel sizes: 1, 3, 5, 7, 9
+        blur_level: int = 9, # right now possible kernel sizes: 1, 3, 5, 7, 9
         shift_range: float = 1,
         rotation_range: int = 10,
         noise_level: int = 10,
