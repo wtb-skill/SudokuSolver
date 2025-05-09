@@ -66,7 +66,7 @@ def process_sudoku_image() -> str or Response:
             preprocessed_digit_images = sudoku_pipeline.process_sudoku_image()
 
             # Step 2: Categorize digit images into actual numbers
-            recognizer = SudokuDigitRecognizer(model_path="models/sudoku_digit_recognizer.keras")
+            recognizer = SudokuDigitRecognizer(model_path="models/currently_used/")
             unsolved_board = recognizer.convert_cells_to_digits(extracted_cells=preprocessed_digit_images)
 
             # Create an image of the unsolved board
