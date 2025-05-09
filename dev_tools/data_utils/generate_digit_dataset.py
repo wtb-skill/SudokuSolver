@@ -8,17 +8,18 @@ from typing import List
 
 class DigitDatasetGenerator:
     def __init__(
-        self,
-        image_size: int = 32,
-        output_dir: str = "digit_dataset",
-        num_samples: int = 100,
-        blur_level: int = 9, # right now possible kernel sizes: 1, 3, 5, 7, 9
-        shift_range: float = 1,
-        rotation_range: int = 10,
-        noise_level: int = 10,
-        fonts_dir: str = "fonts",
-        clean_proportion: float = 0.5
+            self,
+            image_size: int = 32,               # Output image resolution (32x32 pixels)
+            output_dir: str = "digit_dataset",  # Root directory to save generated images
+            num_samples: int = 10000,           # Number of images to generate per digit (1–9)
+            blur_level: int = 9,                # Max blur: possible kernel sizes = 1, 3, 5, 7, 9
+            shift_range: float = 1,             # Max ±1 pixel shift in x/y when rendering digit
+            rotation_range: int = 10,           # Max ±10° rotation applied randomly
+            noise_level: int = 10,              # Pixel noise values in range [-10, 10]
+            fonts_dir: str = "fonts",           # Directory containing .ttf/.otf font files
+            clean_proportion: float = 0.3       # 30% of images are clean; 70% are augmented
     ):
+
         """
         Initializes the digit dataset generator.
 
@@ -212,9 +213,9 @@ class DigitDatasetGenerator:
 
 if __name__ == "__main__":
     generator = DigitDatasetGenerator(
-        num_samples=1000,
+        num_samples=10000,
         clean_proportion=0.3,
-        output_dir="test_dataset" # test_dataset to use for ModelEvaluator outside training or
+        output_dir="digit_dataset" # test_dataset to use for ModelEvaluator outside training or
                                 # digit_dataset to use for training
     )
     generator.generate_images()
