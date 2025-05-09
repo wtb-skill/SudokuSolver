@@ -74,7 +74,7 @@ class DigitDatasetGenerator:
             if font_name.endswith(('.ttf', '.otf'))
         ]
 
-    def create_digit_image(self, digit: int, font_path: str) -> np.ndarray:
+    def create_digit_image_old(self, digit: int, font_path: str) -> np.ndarray:
         """
         Renders a digit into a centered grayscale image using a given font.
 
@@ -94,6 +94,36 @@ class DigitDatasetGenerator:
 
         x = (self.image_size - w) // 2 + random.uniform(-self.shift_range, self.shift_range)
         y = (self.image_size - 2 * h) // 2 + random.uniform(-self.shift_range, self.shift_range)
+
+        draw.text((x, y), str(digit), font=font, fill=255)
+        return np.array(img)
+
+    def create_digit_image(self, digit: int, font_path: str) -> np.ndarray:
+        """
+        Renders a digit into a centered grayscale image using a given font.
+
+        Parameters:
+            digit (int): Digit (1–9) to render.
+            font_path (str): Path to a valid .ttf/.otf font.
+
+        Returns:
+            np.ndarray: Grayscale image of the digit.
+        """
+        font = ImageFont.truetype(font_path, size=28)
+        img = Image.new("L", (self.image_size, self.image_size), 0)
+        draw = ImageDraw.Draw(img)
+
+        # Get bounding box and font metrics
+        bbox = draw.textbbox((0, 0), str(digit), font=font)
+        w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+
+        # Improved vertical centering using ascent and descent
+        ascent, descent = font.getmetrics()
+        text_height = ascent + descent
+
+        # Calculate centered position with fine-tuned vertical centering
+        x = (self.image_size - w) // 2 + random.uniform(-self.shift_range, self.shift_range)
+        y = (self.image_size - text_height) // 2 + random.uniform(-self.shift_range, self.shift_range)
 
         draw.text((x, y), str(digit), font=font, fill=255)
         return np.array(img)
@@ -213,7 +243,7 @@ class DigitDatasetGenerator:
 
 if __name__ == "__main__":
     generator = DigitDatasetGenerator(
-        num_samples=10000,
+        num_samples=1000,
         clean_proportion=0.3,
         output_dir="digit_dataset" # test_dataset to use for ModelEvaluator outside training or
                                 # digit_dataset to use for training
