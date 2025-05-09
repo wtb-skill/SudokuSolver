@@ -74,7 +74,7 @@ class DigitDatasetGenerator:
             if font_name.endswith(('.ttf', '.otf'))
         ]
 
-    def create_digit_image_old(self, digit: int, font_path: str) -> np.ndarray:
+    def create_digit_image_used_for_v1(self, digit: int, font_path: str) -> np.ndarray:
         """
         Renders a digit into a centered grayscale image using a given font.
 
