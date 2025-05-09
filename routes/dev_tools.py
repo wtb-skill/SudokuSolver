@@ -213,7 +213,7 @@ def evaluate_recognition_accuracy():
             preprocessed_digit_images = sudoku_pipeline.process_sudoku_image()
 
             # Recognize digits
-            recognizer = SudokuDigitRecognizer(model_path="models/sudoku_digit_recognizer.keras")
+            recognizer = SudokuDigitRecognizer(model_path="models/currently_used/")
             predicted_board = recognizer.convert_cells_to_digits(extracted_cells=preprocessed_digit_images)
             predicted_board_list = predicted_board.tolist()
 

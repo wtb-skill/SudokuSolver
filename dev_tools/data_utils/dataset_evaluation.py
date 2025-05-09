@@ -1679,8 +1679,8 @@ class DigitDatasetEvaluator:
 
 
 if __name__ == "__main__":
-    evaluator = DigitDatasetEvaluator(dataset_path="digit_dataset")
-    evaluator.run_full_evaluation("9")
+    evaluator = DigitDatasetEvaluator(dataset_path="test_dataset")
+    evaluator.run_full_evaluation("2")
 
 
 
