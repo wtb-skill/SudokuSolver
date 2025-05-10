@@ -44,28 +44,36 @@ class ModelEvaluator:
         self.predicted_classes = self.predictions.argmax(axis=1)
 
     @staticmethod
-    def _load_model_from_directory(directory: str):
+    def _load_model_from_directory(model_path: str):
         """
-        Loads the most recent model from the given directory.
+        Loads a model from the given path, handling both file-based and directory-based models.
 
         Parameters:
-            directory (str): Path to the directory containing model files.
+            model_path (str): Path to the model file or directory.
 
         Returns:
             keras.Model: The loaded model.
         """
-        valid_extensions = ['.keras', '.h5']
-        model_files = [f for f in os.listdir(directory) if any(f.endswith(ext) for ext in valid_extensions)]
+        if os.path.isfile(model_path):
+            # Directly load model file (.keras or .h5)
+            print(f"[INFO] Loading model from file: {model_path}")
+            return load_model(model_path)
+        elif os.path.isdir(model_path):
+            # Find the most recent model file in the directory
+            valid_extensions = ['.keras', '.h5']
+            model_files = [f for f in os.listdir(model_path) if any(f.endswith(ext) for ext in valid_extensions)]
 
-        if len(model_files) == 0:
-            raise ValueError("No valid model files found in the specified directory.")
+            if len(model_files) == 0:
+                raise ValueError("No valid model files found in the specified directory.")
 
-        # Get the most recent model based on modification time
-        latest_model_file = max(model_files, key=lambda f: os.path.getmtime(os.path.join(directory, f)))
-        model_file_path = os.path.join(directory, latest_model_file)
+            # Get the most recent model file
+            latest_model_file = max(model_files, key=lambda f: os.path.getmtime(os.path.join(model_path, f)))
+            model_file_path = os.path.join(model_path, latest_model_file)
 
-        print(f"Loading model: {model_file_path}")
-        return load_model(model_file_path)
+            print(f"[INFO] Loading model from directory: {model_file_path}")
+            return load_model(model_file_path)
+        else:
+            raise ValueError(f"Invalid model path: {model_path}. Must be a file or directory.")
 
     @staticmethod
     def ensure_output_folder(path: str) -> None:
