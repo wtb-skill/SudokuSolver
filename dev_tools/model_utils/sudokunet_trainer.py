@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import cv2
 import os
+from tqdm import tqdm
 from pathlib import Path
 
 class SudokunetTrainer:
@@ -43,38 +44,47 @@ class SudokunetTrainer:
         print("[INFO] Accessing the custom dataset...")
 
         data, labels = [], []
+        total_images = 0
 
+        # Calculate the total number of images for the progress bar
         for digit in range(1, 10):
             digit_path = os.path.join(self.dataset_path, str(digit))
-            if not os.path.exists(digit_path):
-                print(f"[WARNING] Skipping {digit_path} (Folder not found)")
-                continue
+            if os.path.exists(digit_path):
+                total_images += len(os.listdir(digit_path))
 
-            print(f"[INFO] Processing digit '{digit}'...")
-            digit_images = os.listdir(digit_path)
-            print(f"   - Found {len(digit_images)} images for digit {digit}")
+        # Single progress bar for all digits
+        with tqdm(total=total_images, desc="Processing dataset", unit="img") as pbar:
+            for digit in range(1, 10):
+                digit_path = os.path.join(self.dataset_path, str(digit))
+                if not os.path.exists(digit_path):
+                    print(f"[WARNING] Skipping {digit_path} (Folder not found)")
+                    continue
 
-            for i, image_name in enumerate(digit_images):
-                img_path = os.path.join(digit_path, image_name)
-                img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
-                img = cv2.resize(img, (self.image_size, self.image_size))
-                img = img.astype("float32") / 255.0
-                img = np.expand_dims(img, axis=-1)
+                digit_images = os.listdir(digit_path)
+                for image_name in digit_images:
+                    img_path = os.path.join(digit_path, image_name)
+                    img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+                    if img is None:
+                        pbar.update(1)
+                        continue
+                    img = cv2.resize(img, (self.image_size, self.image_size))
+                    img = img.astype("float32") / 255.0
+                    img = np.expand_dims(img, axis=-1)
 
-                data.append(img)
-                labels.append(digit - 1)
-
-                if i % 1000 == 0 and i > 0:
-                    print(f"     - Processed {i} images for digit {digit}...")
+                    data.append(img)
+                    labels.append(digit - 1)
+                    pbar.update(1)
 
         data = np.array(data)
         labels = to_categorical(np.array(labels), num_classes=9)
         print(f"[INFO] Total dataset size: {len(data)} images")
 
+        # Shuffle data and labels together
         indices = np.arange(len(data))
         np.random.shuffle(indices)
         data, labels = data[indices], labels[indices]
 
+        # Split the dataset
         split = int(0.8 * len(data))
         self.trainData, self.testData = data[:split], data[split:]
         self.trainLabels, self.testLabels = labels[:split], labels[split:]
