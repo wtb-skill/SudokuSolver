@@ -170,3 +170,4 @@ dev_tools/data_utils/evaluation_reports
 #dev_tools/data_utils/sudoku_digit_image_extractor/extracted_digit_images
 #dev_tools/data_utils/sudoku_digit_image_extractor/sudoku_images
 #dev_tools/model_utils/evaluation_results
+dev_tools/data_utils/duplicate_reduction_report.txt
