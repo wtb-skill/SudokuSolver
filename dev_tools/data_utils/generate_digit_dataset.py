@@ -243,7 +243,7 @@ class DigitDatasetGenerator:
 
 if __name__ == "__main__":
     generator = DigitDatasetGenerator(
-        num_samples=1000,
+        num_samples=10000,
         clean_proportion=0.3,
         output_dir="digit_dataset" # test_dataset to use for ModelEvaluator outside training or
                                 # digit_dataset to use for training
