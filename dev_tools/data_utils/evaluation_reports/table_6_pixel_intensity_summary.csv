@@ -1,4 +1,0 @@
-Category,Pixel Count,Mean Intensity,Median Intensity,Std Dev,Min Intensity,Max Intensity,% Black (0),% White (255),Skewness,Kurtosis
-Clean,"27,648,000",24.13,0.00,69.33,0,255,86.42%,5.48%,2.75,5.88
-Distorted,"64,512,000",25.36,4.00,51.02,0,255,38.40%,0.18%,2.52,5.85
-Other,0,0.00,0.00,0.00,0,0,0.00%,0.00%,0.00,0.00

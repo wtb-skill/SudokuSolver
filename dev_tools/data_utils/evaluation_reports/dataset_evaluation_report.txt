@@ -1,9 +1,0 @@
-🧪 Running dataset evaluation pipeline...
-Dataset path: digit_dataset
-Evaluation time: 2025-05-09 09:38:18.303871
-
-
-🔍 [Step 9] Detecting partial digits (those touching the image frame)...
-🖼️ [Step 9] Building composite image grid of partial digits...
-🟠 [Step 9] Found 321 potentially partial digit images.
-✅ [Step 9 Complete] Composite image of partial digits saved as 'evaluation_reports\step_9_partial_digits_grid.png'
