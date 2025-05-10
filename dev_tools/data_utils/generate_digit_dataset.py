@@ -1,5 +1,6 @@
 import os
 import cv2
+from tqdm import tqdm
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import random
@@ -211,35 +212,39 @@ class DigitDatasetGenerator:
         """
         print("[INFO] Starting dataset generation...")
 
-        for digit in range(1, 10):
-            digit_dir = os.path.join(self.output_dir, str(digit))
-            os.makedirs(digit_dir, exist_ok=True)
+        # Calculate the total number of images to be generated
+        total_images = self.num_samples * 9
 
-            num_clean = int(self.num_samples * self.clean_proportion)
-            num_distorted = self.num_samples - num_clean
+        # Single progress bar for the entire generation process
+        with tqdm(total=total_images, desc="Generating images", unit="img") as pbar:
+            for digit in range(1, 10):
+                digit_dir = os.path.join(self.output_dir, str(digit))
+                os.makedirs(digit_dir, exist_ok=True)
 
-            print(f"[INFO] Generating {num_clean} clean and {num_distorted} distorted images for '{digit}'")
+                num_clean = int(self.num_samples * self.clean_proportion)
+                num_distorted = self.num_samples - num_clean
 
-            # Clean images
-            for i in range(num_clean):
-                font_path = random.choice(self.font_paths)
-                img_np = self.create_digit_image(digit, font_path)
-                save_path = os.path.join(digit_dir, f"clean_{i}.png")
-                cv2.imwrite(save_path, img_np)
+                # Clean images
+                for i in range(num_clean):
+                    font_path = random.choice(self.font_paths)
+                    img_np = self.create_digit_image(digit, font_path)
+                    save_path = os.path.join(digit_dir, f"clean_{i}.png")
+                    cv2.imwrite(save_path, img_np)
+                    pbar.update(1)
 
-            # Distorted images
-            for i in range(num_distorted):
-                font_path = random.choice(self.font_paths)
-                img_np = self.create_digit_image(digit, font_path)
-                img_np = self.apply_blur(img_np)
-                img_np = self.apply_distortion(img_np)
-                img_np = self.apply_rotation(img_np)
-                img_np = self.apply_noise(img_np)
-                save_path = os.path.join(digit_dir, f"distorted_{i}.png")
-                cv2.imwrite(save_path, img_np)
+                # Distorted images
+                for i in range(num_distorted):
+                    font_path = random.choice(self.font_paths)
+                    img_np = self.create_digit_image(digit, font_path)
+                    img_np = self.apply_blur(img_np)
+                    img_np = self.apply_distortion(img_np)
+                    img_np = self.apply_rotation(img_np)
+                    img_np = self.apply_noise(img_np)
+                    save_path = os.path.join(digit_dir, f"distorted_{i}.png")
+                    cv2.imwrite(save_path, img_np)
+                    pbar.update(1)
 
         print("[INFO] Dataset generation complete!")
-
 
 if __name__ == "__main__":
     generator = DigitDatasetGenerator(
