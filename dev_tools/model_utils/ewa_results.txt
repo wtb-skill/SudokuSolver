@@ -1,5 +1,0 @@
-2025-05-11 15:59:01.194001: Overall accuracy for model v1_2f.keras: 73.97% based on 13888 digits.
-2025-05-11 16:17:23.409642: Overall accuracy for model v1_2g.keras: 74.05% based on 13888 digits.
-2025-05-11 16:36:22.826351: Overall accuracy for model v1_2h.keras: 72.31% based on 13888 digits.
-2025-05-11 16:56:58.855196: Overall accuracy for model v1_2i.keras: 75.8% based on 13888 digits.
-2025-05-11 17:17:02.915080: Overall accuracy for model v1_2j.keras: 73.19% based on 13888 digits.
