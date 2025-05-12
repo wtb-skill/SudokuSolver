@@ -1638,7 +1638,7 @@ class DigitDatasetEvaluator:
         if 3 in steps_to_run:
             self.step_3_visualize_sample_grid()
         if 4 in steps_to_run:
-            pixel_data = self.step_4_intensity_histograms(sample_size=10000)
+            pixel_data = self.step_4_intensity_histograms(sample_size=2000)
         if 5 in steps_to_run:
             corrupt_paths = self.step_5_detect_corrupt_images()
         if 6 in steps_to_run:
@@ -1652,7 +1652,7 @@ class DigitDatasetEvaluator:
         if 10 in steps_to_run:
             _, all_duplicates_by_digit = self.step_10_detect_duplicate_images()
         if 11 in steps_to_run:
-            sobel_data, orb_data = self.step_11_local_feature_consistency(samples_per_digit=10000)
+            sobel_data, orb_data = self.step_11_local_feature_consistency(samples_per_digit=2000)
         if 12 in steps_to_run:
             self.step_12_digit_heatmap_grid()
 
@@ -1679,7 +1679,7 @@ class DigitDatasetEvaluator:
 
 
 if __name__ == "__main__":
-    evaluator = DigitDatasetEvaluator(dataset_path="digit_dataset")
+    evaluator = DigitDatasetEvaluator(dataset_path="all_versions/digit_dataset_v1e", output_dir="evaluation_reports")
     evaluator.run_full_evaluation("all")
 
 

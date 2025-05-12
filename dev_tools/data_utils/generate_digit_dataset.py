@@ -247,11 +247,41 @@ class DigitDatasetGenerator:
         print("[INFO] Dataset generation complete!")
 
 if __name__ == "__main__":
-    generator = DigitDatasetGenerator(
-        num_samples=10000,
-        clean_proportion=0.3,
-        output_dir="digit_dataset" # test_dataset to use for ModelEvaluator outside training or
-                                # digit_dataset to use for training
-    )
-    generator.generate_images()
 
+    # generator = DigitDatasetGenerator(
+    #     num_samples=100,
+    #     clean_proportion=0.3,
+    #     output_dir="digit_dataset" # test_dataset to use for ModelEvaluator outside training or
+    #                             # digit_dataset to use for training
+    # )
+    # generator.generate_images()
+
+    # Names for the datasets
+    dataset_names = [
+        'digit_dataset_v1_2d',
+        'digit_dataset_v1_2e',
+        'digit_dataset_v1_2f',
+        'digit_dataset_v1_2g',
+        'digit_dataset_v1_2h',
+        'digit_dataset_v1_2i',
+        'digit_dataset_v1_2j',
+    ]
+
+    for name in dataset_names:
+        print(f"[INFO] Generating dataset: {name}")
+
+        generator = DigitDatasetGenerator(
+        image_size = 32,
+        output_dir = "digit_dataset",
+        num_samples = 10000,
+        blur_level = 9,
+        shift_range = 1,
+        rotation_range = 10,
+        noise_level = 10,
+        fonts_dir = "fonts",
+        clean_proportion = 0.3
+        )
+        generator.generate_images()
+        print(f"[INFO] Completed dataset: {name}")
+
+    print("[INFO] All datasets generated successfully!")

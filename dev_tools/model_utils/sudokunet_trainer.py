@@ -226,7 +226,7 @@ if __name__ == "__main__":
 
     project_root = Path(__file__).resolve().parent.parent.parent
     dataset_path = str(project_root / "dev_tools" / "data_utils" / "digit_dataset")
-    model_output_path = str(project_root / "models" / "v2.keras")
+    model_output_path = str(project_root / "models" / "model.keras")
 
     trainer = SudokunetTrainer(
         dataset_path=dataset_path,

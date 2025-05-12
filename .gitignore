@@ -164,7 +164,7 @@ debug_images
 flask_session_data
 collected_data
 dev_tools/data_utils/digit_dataset
-dev_tools/data_utils/digit_dataset_v1
+dev_tools/data_utils/all_versions
 #dev_tools/data_utils/fonts
 dev_tools/data_utils/test_dataset
 dev_tools/data_utils/evaluation_reports
