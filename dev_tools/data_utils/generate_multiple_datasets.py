@@ -5,14 +5,14 @@ if __name__ == "__main__":
     dataset_names = [
         'digit_dataset_v1_2a',
         'digit_dataset_v1_2b',
-        # 'digit_dataset_v1_2c',
-        # 'digit_dataset_v1_2d',
-        # 'digit_dataset_v1_2e',
-        # 'digit_dataset_v1_2f',
-        # 'digit_dataset_v1_2g',
-        # 'digit_dataset_v1_2h',
-        # 'digit_dataset_v1_2i',
-        # 'digit_dataset_v1_2j',
+        'digit_dataset_v1_2c',
+        'digit_dataset_v1_2d',
+        'digit_dataset_v1_2e',
+        'digit_dataset_v1_2f',
+        'digit_dataset_v1_2g',
+        'digit_dataset_v1_2h',
+        'digit_dataset_v1_2i',
+        'digit_dataset_v1_2j',
     ]
 
     for name in dataset_names:
