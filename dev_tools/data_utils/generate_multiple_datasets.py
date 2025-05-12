@@ -8,11 +8,11 @@ if __name__ == "__main__":
         'digit_dataset_v2c',
         'digit_dataset_v2d',
         'digit_dataset_v2e',
-        'digit_dataset_v2f',
-        'digit_dataset_v2g',
-        'digit_dataset_v2h',
-        'digit_dataset_v2i',
-        'digit_dataset_v2j',
+        # 'digit_dataset_v2f',
+        # 'digit_dataset_v2g',
+        # 'digit_dataset_v2h',
+        # 'digit_dataset_v2i',
+        # 'digit_dataset_v2j',
     ]
 
     for name in dataset_names:
