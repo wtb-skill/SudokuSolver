@@ -11,17 +11,17 @@ from dev_tools.data_utils.dataset_deduplicator import DuplicateImageReducer
 class DigitDatasetGenerator:
     def __init__(
             self,
-            image_size: int = 32,               # Output image resolution (32x32 pixels)
+            image_size: int = 32,  # Output image resolution (32x32 pixels)
             output_dir: str = "digit_dataset",  # Root directory to save generated images
-            num_samples: int = 10000,           # Number of images to generate per digit (1–9)
-            blur_level: int = 9,                # Max blur: possible kernel sizes = 1, 3, 5, 7, 9
-            shift_range: float = 1,             # Max ±1 pixel shift in x/y when rendering digit
-            rotation_range: int = 10,           # Max ±10° rotation applied randomly
-            noise_level: int = 10,              # Pixel noise values in range [-10, 10]
-            fonts_dir: str = "fonts",           # Directory containing .ttf/.otf font files
-            clean_proportion: float = 0.3       # 30% of images are clean; 70% are augmented
+            num_samples: int = 10000,  # Number of images to generate per digit (1–9)
+            blur_level: int = 9,  # Max blur: possible kernel sizes = 1, 3, 5, 7, 9
+            shift_range: float = 1,  # Max ±1 pixel shift in x/y when rendering digit
+            rotation_range: int = 10,  # Max ±10° rotation applied randomly
+            noise_level: int = 10,  # Pixel noise values in range [-10, 10]
+            fonts_dir: str = "fonts",  # Directory containing .ttf/.otf font files
+            clean_proportion: float = 0.3,  # 30% of images are clean; 70% are augmented
+            font_sizes: List[int] = [20, 22, 24, 26, 28]  # List of possible font sizes
     ):
-
         """
         Initializes the digit dataset generator.
 
@@ -35,6 +35,7 @@ class DigitDatasetGenerator:
             noise_level (int): Intensity of added random noise.
             fonts_dir (str): Directory containing .ttf/.otf font files.
             clean_proportion (float): Fraction of clean images (0 to 1).
+            font_sizes (List[int]): List of possible font sizes used to render the digits.
         """
         self.image_size: int = image_size
         self.output_dir: str = output_dir
@@ -45,7 +46,9 @@ class DigitDatasetGenerator:
         self.noise_level: int = noise_level
         self.fonts_dir: str = fonts_dir
         self.clean_proportion: float = clean_proportion
+        self.font_sizes: List[int] = font_sizes  # List of possible font sizes
 
+        # Load available fonts from the specified directory
         self.font_paths: List[str] = self.load_fonts_from_directory(fonts_dir)
         if not self.font_paths:
             raise ValueError(f"No fonts found in {fonts_dir}! Please make sure the fonts are available.")
@@ -102,7 +105,7 @@ class DigitDatasetGenerator:
 
     def create_digit_image(self, digit: int, font_path: str) -> np.ndarray:
         """
-        Renders a digit into a centered grayscale image using a given font.
+        Renders a digit into a centered grayscale image using a random font size.
 
         Parameters:
             digit (int): Digit (1–9) to render.
@@ -111,7 +114,9 @@ class DigitDatasetGenerator:
         Returns:
             np.ndarray: Grayscale image of the digit.
         """
-        font = ImageFont.truetype(font_path, size=28)
+        # Choose a random font size from the list
+        font_size = random.choice(self.font_sizes)
+        font = ImageFont.truetype(font_path, size=font_size)
         img = Image.new("L", (self.image_size, self.image_size), 0)
         draw = ImageDraw.Draw(img)
 
@@ -127,9 +132,9 @@ class DigitDatasetGenerator:
         x = (self.image_size - w) // 2 + random.uniform(-self.shift_range, self.shift_range)
         y = (self.image_size - text_height) // 2 + random.uniform(-self.shift_range, self.shift_range)
 
+        # Render the digit onto the image
         draw.text((x, y), str(digit), font=font, fill=255)
         return np.array(img)
-
     def apply_blur(self, img_np: np.ndarray) -> np.ndarray:
         """
         Applies Gaussian blur to the image using a randomly selected odd kernel size
@@ -252,14 +257,15 @@ if __name__ == "__main__":
 
     generator = DigitDatasetGenerator(
         image_size=32,
-        output_dir="digit_dataset", # test_dataset to use for ModelEvaluator outside training or
+        output_dir="digit_dataset_v2_1a", # test_dataset to use for ModelEvaluator outside training or
                                     # digit_dataset to use for training
-        num_samples=100,
-        blur_level=9,
-        shift_range=1,
+        num_samples=10000,
+        blur_level=7,
+        shift_range=3,
         rotation_range=10,
         noise_level=10,
         fonts_dir="fonts",
-        clean_proportion=0.3
+        clean_proportion=0.005,
+        font_sizes = [20, 22, 24, 26, 28]
     )
     generator.generate_images()
