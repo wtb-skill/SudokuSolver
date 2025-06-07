@@ -176,3 +176,8 @@ dev_tools/data_utils/duplicate_reduction_report.txt
 dev_tools/model_utils/training_history.jpg
 dev_tools/model_utils/ewa_results.txt
 
+/uploads/very_noisy/
+/uploads/unsolved/
+/uploads/not_tested_yet/
+/uploads/clean/
+/uploads/solved/
