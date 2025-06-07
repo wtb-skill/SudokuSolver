@@ -87,7 +87,10 @@ interactive web interface for users to upload images and view results in real ti
 
 ## Usage
 
-### 1. Install Project Dependencies
+
+### 1. Install Python 3.12.6
+
+### 2. Install Project Dependencies
 
 Start by installing the required Python dependencies. You can install them using `pip` from the `requirements.txt` file.
 
@@ -95,7 +98,7 @@ Start by installing the required Python dependencies. You can install them using
 pip install -r requirements.txt
 ```
 
-### 2. Run the Application
+### 3. Run the Application
 
 To start the Flask application, run the following command:
 ```
@@ -104,7 +107,7 @@ python app.py
 The app will launch and be accessible at:
 http://127.0.0.1:5000/
 
-### 3. Upload & Solve Sudoku Puzzles
+### 4. Upload & Solve Sudoku Puzzles
 
 1. **Upload an Image** <br>
     Upload a photo of a Sudoku grid — centered, well-lit, and clearly visible digits work best.
