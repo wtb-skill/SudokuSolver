@@ -26,12 +26,12 @@ class BoardDetector:
     def detect(self) -> np.ndarray:
         try:
             corners = self._detect_contour_corners()
-            self.warped = self.warp_board(corners, label="Warped_Sudoku_Board")
         except Exception as e:
             logger.info(f"[Primary Detection Failed] {e}")
             logger.info(f"[Falling back to grid-based detection method...]")
             corners = self.detect_fallback()
-            self.warped = self.warp_board(corners, label="Fallback_Warped_Sudoku_Board")
+
+        self.warped = self.warp_board(corners, label="Warped_Sudoku_Board")
         return self.warped
 
     def warp_board(
