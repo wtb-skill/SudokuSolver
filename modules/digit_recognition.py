@@ -30,14 +30,20 @@ class SudokuDigitRecognizer:
         Returns:
             keras.Model: The loaded model.
         """
-        valid_extensions = ['.keras', '.h5']
-        model_files = [f for f in os.listdir(directory) if any(f.endswith(ext) for ext in valid_extensions)]
+        valid_extensions = [".keras", ".h5"]
+        model_files = [
+            f
+            for f in os.listdir(directory)
+            if any(f.endswith(ext) for ext in valid_extensions)
+        ]
 
         if len(model_files) == 0:
             raise ValueError("No valid model files found in the specified directory.")
 
         # Get the most recent model based on modification time
-        latest_model_file = max(model_files, key=lambda f: os.path.getmtime(os.path.join(directory, f)))
+        latest_model_file = max(
+            model_files, key=lambda f: os.path.getmtime(os.path.join(directory, f))
+        )
         model_file_path = os.path.join(directory, latest_model_file)
 
         logger.info(f"Loading model: {model_file_path}")
@@ -53,11 +59,17 @@ class SudokuDigitRecognizer:
         Returns:
             int: The predicted digit (1-9, where 0 represents an empty cell).
         """
-        probabilities = self.model.predict(cell, verbose=0)[0]  # Get prediction probabilities
-        predicted_digit = np.argmax(probabilities) + 1  # Adjust for 1-based Sudoku digits
+        probabilities = self.model.predict(cell, verbose=0)[
+            0
+        ]  # Get prediction probabilities
+        predicted_digit = (
+            np.argmax(probabilities) + 1
+        )  # Adjust for 1-based Sudoku digits
 
         # Formatting probabilities nicely
-        prob_str = ", ".join([f"{i+1}: {prob:.2%}" for i, prob in enumerate(probabilities)])
+        prob_str = ", ".join(
+            [f"{i+1}: {prob:.2%}" for i, prob in enumerate(probabilities)]
+        )
 
         # Use internal _log method
         logger.info(f"   ✅ Predicted Digit: {predicted_digit}")
@@ -65,7 +77,9 @@ class SudokuDigitRecognizer:
 
         return predicted_digit
 
-    def convert_cells_to_digits(self, extracted_cells: ProcessedDigitGrid) -> np.ndarray:
+    def convert_cells_to_digits(
+        self, extracted_cells: ProcessedDigitGrid
+    ) -> np.ndarray:
         """
         Converts extracted Sudoku cells into a 9x9 board with recognized digits.
 
@@ -86,4 +100,3 @@ class SudokuDigitRecognizer:
                     digit_board[row, col] = self._predict_single_digit(cell)
 
         return digit_board
-

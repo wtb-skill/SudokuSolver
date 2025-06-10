@@ -11,9 +11,17 @@ import os
 from tqdm import tqdm
 from pathlib import Path
 
+
 class SudokunetTrainer:
-    def __init__(self, dataset_path: str, model_output_path: str, image_size: int = 32,
-                 init_lr: float = 1e-3, epochs: int = 10, batch_size: int = 128):
+    def __init__(
+        self,
+        dataset_path: str,
+        model_output_path: str,
+        image_size: int = 32,
+        init_lr: float = 1e-3,
+        epochs: int = 10,
+        batch_size: int = 128,
+    ):
         """
         Initializes the SudokuDigitTrainer.
 
@@ -88,7 +96,9 @@ class SudokunetTrainer:
         split = int(0.8 * len(data))
         self.trainData, self.testData = data[:split], data[split:]
         self.trainLabels, self.testLabels = labels[:split], labels[split:]
-        print(f"[INFO] Dataset split into {len(self.trainData)} training and {len(self.testData)} testing samples.")
+        print(
+            f"[INFO] Dataset split into {len(self.trainData)} training and {len(self.testData)} testing samples."
+        )
 
     def load_mnist_dataset(self):
         """
@@ -112,7 +122,9 @@ class SudokunetTrainer:
         # Resize if needed
         if self.image_size != 28:
             print(f"[INFO] Resizing images to {self.image_size}x{self.image_size}...")
-            data_resized = np.array([cv2.resize(img, (self.image_size, self.image_size)) for img in data])
+            data_resized = np.array(
+                [cv2.resize(img, (self.image_size, self.image_size)) for img in data]
+            )
             data = np.expand_dims(data_resized, axis=-1)
 
         # One-hot encode labels
@@ -128,7 +140,9 @@ class SudokunetTrainer:
         split = int(0.8 * len(data))
         self.trainData, self.testData = data[:split], data[split:]
         self.trainLabels, self.testLabels = labels[:split], labels[split:]
-        print(f"[INFO] Dataset split into {len(self.trainData)} training and {len(self.testData)} testing samples.")
+        print(
+            f"[INFO] Dataset split into {len(self.trainData)} training and {len(self.testData)} testing samples."
+        )
 
     def compile_model(self):
         """
@@ -139,7 +153,9 @@ class SudokunetTrainer:
         self.model = SudokuNet.build(
             width=self.image_size, height=self.image_size, depth=1, classes=9
         )
-        self.model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
+        self.model.compile(
+            loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"]
+        )
 
     def save_model(self):
         """
@@ -161,21 +177,21 @@ class SudokunetTrainer:
 
         # Plot accuracy
         plt.subplot(1, 2, 1)
-        plt.plot(history.history['accuracy'], label='Training Accuracy')
-        plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
-        plt.title('Model Accuracy')
-        plt.xlabel('Epoch')
-        plt.ylabel('Accuracy')
-        plt.legend(loc='lower right')
+        plt.plot(history.history["accuracy"], label="Training Accuracy")
+        plt.plot(history.history["val_accuracy"], label="Validation Accuracy")
+        plt.title("Model Accuracy")
+        plt.xlabel("Epoch")
+        plt.ylabel("Accuracy")
+        plt.legend(loc="lower right")
 
         # Plot loss
         plt.subplot(1, 2, 2)
-        plt.plot(history.history['loss'], label='Training Loss')
-        plt.plot(history.history['val_loss'], label='Validation Loss')
-        plt.title('Model Loss')
-        plt.xlabel('Epoch')
-        plt.ylabel('Loss')
-        plt.legend(loc='upper right')
+        plt.plot(history.history["loss"], label="Training Loss")
+        plt.plot(history.history["val_loss"], label="Validation Loss")
+        plt.title("Model Loss")
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
+        plt.legend(loc="upper right")
 
         if save_path:
             plt.tight_layout()
@@ -188,15 +204,18 @@ class SudokunetTrainer:
         Trains the model using loaded dataset and saves the training history plot.
         """
         if self.model is None:
-            raise RuntimeError("Model has not been compiled. Call compile_model() first.")
+            raise RuntimeError(
+                "Model has not been compiled. Call compile_model() first."
+            )
 
         print("[INFO] Training network...")
         history = self.model.fit(
-            self.trainData, self.trainLabels,
+            self.trainData,
+            self.trainLabels,
             validation_data=(self.testData, self.testLabels),
             batch_size=self.batch_size,
             epochs=self.epochs,
-            verbose=1
+            verbose=1,
         )
 
         # Save the training history plot
@@ -206,7 +225,7 @@ class SudokunetTrainer:
         """
         Runs the complete training pipeline.
         """
-        self.load_dataset() # load_dataset or load_mnist_dataset
+        self.load_dataset()  # load_dataset or load_mnist_dataset
         self.compile_model()
         self.train()
         self.save_model()
@@ -217,7 +236,7 @@ class SudokunetTrainer:
             training_tests=True,
             test_data=self.testData,
             test_labels=self.testLabels,
-            class_names=[str(i) for i in range(1, 10)]
+            class_names=[str(i) for i in range(1, 10)],
         )
         evaluator.run()
 
@@ -234,6 +253,6 @@ if __name__ == "__main__":
         image_size=32,
         init_lr=1e-3,
         epochs=10,
-        batch_size=128
+        batch_size=128,
     )
     trainer.run()

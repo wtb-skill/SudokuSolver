@@ -20,7 +20,7 @@ if __name__ == "__main__":
                 image_size=32,
                 init_lr=1e-3,
                 epochs=10,
-                batch_size=128
+                batch_size=128,
             )
             print(f"Training with dataset: {folder} -> Model: v{version}.keras")
             trainer.run()

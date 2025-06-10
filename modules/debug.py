@@ -1,4 +1,4 @@
-#modules/debug.py
+# modules/debug.py
 import os
 import cv2
 import io
@@ -9,6 +9,7 @@ import logging
 
 # Create a logger for this module
 logger = logging.getLogger(__name__)
+
 
 class ImageCollector:
     """
@@ -50,7 +51,9 @@ class ImageCollector:
             cv2.imwrite(os.path.join(self.output_dir, f"{step}.png"), img)
 
         if self.grid_image is not None:
-            cv2.imwrite(os.path.join(self.output_dir, "grid_image.png"), self.grid_image)
+            cv2.imwrite(
+                os.path.join(self.output_dir, "grid_image.png"), self.grid_image
+            )
 
     def show_images(self) -> None:
         """
@@ -81,7 +84,9 @@ class ImageCollector:
         """
         self.resize_images(450, 450)
 
-        image_list: List[Tuple[str, np.ndarray]] = [(name, img) for name, img in self.images.items()]
+        image_list: List[Tuple[str, np.ndarray]] = [
+            (name, img) for name, img in self.images.items()
+        ]
 
         # Convert grayscale to BGR for consistent channel depth
         for i, (name, img) in enumerate(image_list):
@@ -95,7 +100,9 @@ class ImageCollector:
         rows: List[np.ndarray] = []
 
         for i in range(num_rows):
-            row_images = image_list[i * max_images_per_row:(i + 1) * max_images_per_row]
+            row_images = image_list[
+                i * max_images_per_row : (i + 1) * max_images_per_row
+            ]
 
             # Pad row if needed
             while len(row_images) < max_images_per_row:
@@ -110,7 +117,15 @@ class ImageCollector:
                 text_size = cv2.getTextSize(name, font, scale, thickness)[0]
                 text_x = (img.shape[1] - text_size[0]) // 2
                 text_y = (50 + text_size[1]) // 2
-                cv2.putText(label_area, name, (text_x, text_y), font, scale, (255, 255, 255), thickness)
+                cv2.putText(
+                    label_area,
+                    name,
+                    (text_x, text_y),
+                    font,
+                    scale,
+                    (255, 255, 255),
+                    thickness,
+                )
                 labeled_images.append(np.vstack([label_area, img]))
 
             rows.append(np.hstack(labeled_images))
@@ -135,7 +150,7 @@ class ImageCollector:
         if img is None:
             return None
 
-        _, img_encoded = cv2.imencode('.jpg', img)
+        _, img_encoded = cv2.imencode(".jpg", img)
         return io.BytesIO(img_encoded.tobytes())
 
     def collect_digit_cells(self, digits: List[List[Optional[np.ndarray]]]) -> None:
@@ -149,7 +164,9 @@ class ImageCollector:
             for cell in row:
                 if cell is not None:
                     if cell.shape != (32, 32):
-                        logger.info(f"[Warning] Invalid image shape: expected (32, 32), got {cell.shape}")
+                        logger.info(
+                            f"[Warning] Invalid image shape: expected (32, 32), got {cell.shape}"
+                        )
                     else:
                         self.digit_cells.append(cell.copy())
 

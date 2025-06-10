@@ -7,6 +7,7 @@ from typing import Optional
 from modules.debug import ImageCollector
 from modules.utils.types import *
 
+
 class DigitExtractor:
     """
     Extracts digits from a warped Sudoku board by detecting cells, segmenting digits,
@@ -62,13 +63,17 @@ class DigitExtractor:
         blurred = cv2.GaussianBlur(clahe_enhanced, (3, 3), 0)
 
         # Step 3: Threshold (invert so digit is white)
-        thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
+        thresh = cv2.threshold(
+            blurred, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU
+        )[1]
 
         # Step 4: Clear border artifacts
         cleared = clear_border(thresh)
 
         # Step 5: Find contours
-        contours = cv2.findContours(cleared.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours = cv2.findContours(
+            cleared.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
         contours = imutils.grab_contours(contours)
 
         if not contours:
@@ -80,7 +85,12 @@ class DigitExtractor:
         valid_contours = []
         for contour in contours:
             x, y, cw, ch = cv2.boundingRect(contour)
-            if x <= margin or y <= margin or x + cw >= w - margin or y + ch >= h - margin:
+            if (
+                x <= margin
+                or y <= margin
+                or x + cw >= w - margin
+                or y + ch >= h - margin
+            ):
                 continue  # Skip contour touching the edges
             valid_contours.append(contour)
 
@@ -108,7 +118,9 @@ class DigitExtractor:
         Returns:
             DigitGrid: A 9x9 grid of digit images (or None for empty cells).
         """
-        cells = self.split_into_cells() # at this point digit image is faint but visible
+        cells = (
+            self.split_into_cells()
+        )  # at this point digit image is faint but visible
 
         # Extract digit images and resize them to (32, 32)
         digit_images_grid: DigitGrid = []
@@ -117,7 +129,9 @@ class DigitExtractor:
             for cell in row:
                 digit_image = self.extract_digit_image_from_cell(cell)
                 if digit_image is not None:
-                    digit_image = cv2.resize(digit_image, (32, 32))  # Resize to 32x32 right here
+                    digit_image = cv2.resize(
+                        digit_image, (32, 32)
+                    )  # Resize to 32x32 right here
                 digit_image_row.append(digit_image)
             digit_images_grid.append(digit_image_row)
 
@@ -141,9 +155,14 @@ class DigitExtractor:
         """
         grid_image: Optional[np.ndarray] = None
         for row in digits:
-            cells = [cell if cell is not None else np.zeros((32, 32), dtype="uint8") for cell in row]
+            cells = [
+                cell if cell is not None else np.zeros((32, 32), dtype="uint8")
+                for cell in row
+            ]
             row_img = np.concatenate(cells, axis=1)
-            grid_image = row_img if grid_image is None else np.concatenate([grid_image, row_img], axis=0)
+            grid_image = (
+                row_img
+                if grid_image is None
+                else np.concatenate([grid_image, row_img], axis=0)
+            )
         self.image_collector.add_image("Extracted_Digits_Grid", grid_image)
-
-

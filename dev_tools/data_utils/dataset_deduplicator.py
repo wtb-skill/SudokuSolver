@@ -26,7 +26,6 @@ class DuplicateImageReducer:
             print(f"Error reading image {image_path}: {e}")
         return None
 
-
     def load_duplicates(self):
         """
         Loads images, computes hashes, and builds a graph of connected components.
@@ -36,9 +35,15 @@ class DuplicateImageReducer:
             if not os.path.isdir(digit_dir):
                 continue
 
-            image_paths = [os.path.join(digit_dir, img) for img in os.listdir(digit_dir)]
+            image_paths = [
+                os.path.join(digit_dir, img) for img in os.listdir(digit_dir)
+            ]
 
-            with tqdm(total=len(image_paths), desc=f"Deduplicator: Processing digit {digit}", ncols=100) as pbar:
+            with tqdm(
+                total=len(image_paths),
+                desc=f"Deduplicator: Processing digit {digit}",
+                ncols=100,
+            ) as pbar:
                 hashes = []
                 for image_path in image_paths:
                     result = self._compute_hash(image_path)
@@ -49,7 +54,11 @@ class DuplicateImageReducer:
 
             # Building graph with a progress bar
             total_comparisons = len(hashes) * (len(hashes) - 1) // 2
-            with tqdm(total=total_comparisons, desc=f"Deduplicator: Building graph for digit {digit}", ncols=100) as pbar_graph:
+            with tqdm(
+                total=total_comparisons,
+                desc=f"Deduplicator: Building graph for digit {digit}",
+                ncols=100,
+            ) as pbar_graph:
                 for i in range(len(hashes)):
                     for j in range(i + 1, len(hashes)):
                         h1, path1 = hashes[i]
@@ -72,14 +81,16 @@ class DuplicateImageReducer:
         processed = set()
         files_to_delete = []
 
-        with tqdm(total=len(components), desc="Deduplicator: Reducing duplicates", ncols=100) as pbar:
+        with tqdm(
+            total=len(components), desc="Deduplicator: Reducing duplicates", ncols=100
+        ) as pbar:
             for cluster in components:
                 cluster = list(cluster)
                 representative = cluster[0]
                 for img in cluster[1:]:
                     if img not in processed:
                         files_to_delete.append(img)
-                        digit = self.graph.nodes[img]['digit']
+                        digit = self.graph.nodes[img]["digit"]
                         self.removed_count[digit] += 1
                     processed.add(img)
                 pbar.update(1)
@@ -93,14 +104,19 @@ class DuplicateImageReducer:
         gc.collect()
 
     def generate_report(self):
-        report_lines = ["Duplicate Reduction Report\n", "-" * 30 + "\n", f"{'Digit':<10}{'Removed Images':>20}\n", "-" * 30 + "\n"]
+        report_lines = [
+            "Duplicate Reduction Report\n",
+            "-" * 30 + "\n",
+            f"{'Digit':<10}{'Removed Images':>20}\n",
+            "-" * 30 + "\n",
+        ]
 
         for digit in sorted(self.removed_count.keys()):
             report_lines.append(f"{digit:<10}{self.removed_count[digit]:>20}\n")
 
         report_lines.append("-" * 30 + "\n")
-        report_path = os.path.join(os.getcwd(), 'duplicate_reduction_report.txt')
-        with open(report_path, 'w') as f:
+        report_path = os.path.join(os.getcwd(), "duplicate_reduction_report.txt")
+        with open(report_path, "w") as f:
             f.writelines(report_lines)
         print("✅ Report saved to:", report_path)
         for line in report_lines:
@@ -116,7 +132,8 @@ class DuplicateImageReducer:
         del self.removed_count
         gc.collect()
 
-if __name__ == '__main__':
-    dataset_dir = './digit_dataset_v2b'
+
+if __name__ == "__main__":
+    dataset_dir = "./digit_dataset_v2b"
     reducer = DuplicateImageReducer(dataset_dir)
     reducer.run()

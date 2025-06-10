@@ -39,7 +39,7 @@ class SudokuDigitImageExtractor:
         Extracted digits are saved as individual image files in the output folder.
         """
         for filename in os.listdir(self.input_folder):
-            if filename.endswith(('.jpg', '.png', '.jpeg')):
+            if filename.endswith((".jpg", ".png", ".jpeg")):
                 print(f"Processing {filename}...")
                 img_path: str = os.path.join(self.input_folder, filename)
 
@@ -49,7 +49,9 @@ class SudokuDigitImageExtractor:
                 thresholded: np.ndarray = preprocessor.preprocess()
 
                 # Step 2: Board Detection
-                board_detector = BoardDetector(preprocessor.get_original(), thresholded, self.image_collector)
+                board_detector = BoardDetector(
+                    preprocessor.get_original(), thresholded, self.image_collector
+                )
                 warped_board: np.ndarray = board_detector.detect()
 
                 # Step 3: Digit Extraction

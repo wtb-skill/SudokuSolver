@@ -9,15 +9,19 @@ class NorvigSolver:
     """
 
     def __init__(self) -> None:
-        self.digits: str = '123456789'
-        self.rows: str = 'ABCDEFGHI'
+        self.digits: str = "123456789"
+        self.rows: str = "ABCDEFGHI"
         self.cols: str = self.digits
         self.squares: List[str] = self.cross(self.rows, self.cols)
 
         self.unitlist: List[List[str]] = (
-            [self.cross(self.rows, c) for c in self.cols] +
-            [self.cross(r, self.cols) for r in self.rows] +
-            [self.cross(rs, cs) for rs in ('ABC', 'DEF', 'GHI') for cs in ('123', '456', '789')]
+            [self.cross(self.rows, c) for c in self.cols]
+            + [self.cross(r, self.cols) for r in self.rows]
+            + [
+                self.cross(rs, cs)
+                for rs in ("ABC", "DEF", "GHI")
+                for cs in ("123", "456", "789")
+            ]
         )
 
         self.units: Dict[str, List[List[str]]] = {
@@ -43,7 +47,7 @@ class NorvigSolver:
         Returns:
             Dict[str, str]: Mapping from each square to its value (or '.'/0 for empty).
         """
-        chars: List[str] = [c for c in grid if c in self.digits or c in '0.']
+        chars: List[str] = [c for c in grid if c in self.digits or c in "0."]
         assert len(chars) == 81, "Input grid must be 81 characters long"
         return dict(zip(self.squares, chars))
 
@@ -64,7 +68,9 @@ class NorvigSolver:
                     return False
         return values
 
-    def assign(self, values: Dict[str, str], s: str, d: str) -> Union[Dict[str, str], bool]:
+    def assign(
+        self, values: Dict[str, str], s: str, d: str
+    ) -> Union[Dict[str, str], bool]:
         """
         Eliminate all other values (except d) from values[s] and propagate.
 
@@ -76,12 +82,14 @@ class NorvigSolver:
         Returns:
             Union[Dict[str, str], bool]: Updated values or False if contradiction occurs.
         """
-        other_values = values[s].replace(d, '')
+        other_values = values[s].replace(d, "")
         if all(self.eliminate(values, s, d2) for d2 in other_values):
             return values
         return False
 
-    def eliminate(self, values: Dict[str, str], s: str, d: str) -> Union[Dict[str, str], bool]:
+    def eliminate(
+        self, values: Dict[str, str], s: str, d: str
+    ) -> Union[Dict[str, str], bool]:
         """
         Eliminate digit d from values[s]; propagate when values or places <= 2.
 
@@ -96,7 +104,7 @@ class NorvigSolver:
         if d not in values[s]:
             return values  # Already eliminated
 
-        values[s] = values[s].replace(d, '')
+        values[s] = values[s].replace(d, "")
 
         if len(values[s]) == 0:
             return False  # Contradiction: removed last value
@@ -124,14 +132,21 @@ class NorvigSolver:
             values (Dict[str, str]): Current values for each square.
         """
         width = 1 + max(len(values[s]) for s in self.squares)
-        line = '+'.join(['-' * (width * 3)] * 3)
+        line = "+".join(["-" * (width * 3)] * 3)
         for r in self.rows:
-            print(''.join(values[r + c].center(width) + ('|' if c in '36' else '') for c in self.cols))
-            if r in 'CF':
+            print(
+                "".join(
+                    values[r + c].center(width) + ("|" if c in "36" else "")
+                    for c in self.cols
+                )
+            )
+            if r in "CF":
                 print(line)
         print()
 
-    def search(self, values: Union[Dict[str, str], bool]) -> Union[Dict[str, str], bool]:
+    def search(
+        self, values: Union[Dict[str, str], bool]
+    ) -> Union[Dict[str, str], bool]:
         """
         Using depth-first search and propagation, try all possible values.
 
@@ -176,12 +191,13 @@ class NorvigSolver:
         Returns:
             bool: True if solved correctly, else False.
         """
+
         def unitsolved(unit: List[str]) -> bool:
             return set(values[s] for s in unit) == set(self.digits)
 
         return values is not False and all(unitsolved(unit) for unit in self.unitlist)
 
-    def solve_all(self, grids: List[str], name: str = '') -> None:
+    def solve_all(self, grids: List[str], name: str = "") -> None:
         """
         Solve multiple Sudoku puzzles and report timing.
 
@@ -192,7 +208,9 @@ class NorvigSolver:
         times, results = zip(*[self.time_solve(grid) for grid in grids])
         N = len(results)
         if N > 1:
-            print(f"Solved {sum(results)} of {N} {name} puzzles (avg {sum(times)/N:.2f} secs, max {max(times):.2f} secs).")
+            print(
+                f"Solved {sum(results)} of {N} {name} puzzles (avg {sum(times)/N:.2f} secs, max {max(times):.2f} secs)."
+            )
 
     def time_solve(self, grid: str) -> Tuple[float, bool]:
         """
@@ -217,4 +235,4 @@ class NorvigSolver:
         assert len(self.unitlist) == 27
         assert all(len(self.units[s]) == 3 for s in self.squares)
         assert all(len(self.peers[s]) == 20 for s in self.squares)
-        print('All tests pass.')
+        print("All tests pass.")

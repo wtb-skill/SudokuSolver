@@ -32,6 +32,10 @@ Each cell may either be:
 """
 
 __all__ = [
-    "DigitImage", "DigitRow", "DigitGrid",
-    "ProcessedDigitImage", "ProcessedDigitRow", "ProcessedDigitGrid",
+    "DigitImage",
+    "DigitRow",
+    "DigitGrid",
+    "ProcessedDigitImage",
+    "ProcessedDigitRow",
+    "ProcessedDigitGrid",
 ]

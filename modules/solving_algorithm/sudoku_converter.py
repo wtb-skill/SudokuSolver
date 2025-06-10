@@ -21,7 +21,9 @@ class SudokuConverter:
             str: A string of 81 characters representing the grid, row-wise.
         """
         assert digit_board.shape == (9, 9), "Input must be a 9x9 numpy array."
-        return ''.join(str(digit_board[row, col]) for row in range(9) for col in range(9))
+        return "".join(
+            str(digit_board[row, col]) for row in range(9) for col in range(9)
+        )
 
     @staticmethod
     def dict_to_board(sudoku_dict: Dict[str, str]) -> np.ndarray:
@@ -35,8 +37,8 @@ class SudokuConverter:
             np.ndarray: A 9x9 numpy array representing the Sudoku board.
         """
         board: np.ndarray = np.zeros((9, 9), dtype=int)
-        rows = 'ABCDEFGHI'
-        cols = '123456789'
+        rows = "ABCDEFGHI"
+        cols = "123456789"
 
         for row_idx, row in enumerate(rows):
             for col_idx, col in enumerate(cols):
@@ -61,4 +63,4 @@ class SudokuConverter:
         """
         if len(labels) != 81:
             raise ValueError("Expected exactly 81 labels to form a 9x9 board.")
-        return np.array([labels[i:i + 9] for i in range(0, 81, 9)])
+        return np.array([labels[i : i + 9] for i in range(0, 81, 9)])

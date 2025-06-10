@@ -17,18 +17,22 @@ class SudokuImageProcessor:
 
     def process_images(self) -> None:
         for filename in os.listdir(self.input_folder):
-            if filename.endswith(('.jpg', '.png', '.jpeg')):
+            if filename.endswith((".jpg", ".png", ".jpeg")):
                 print(f"Processing {filename}...")
                 img_path = os.path.join(self.input_folder, filename)
 
                 try:
                     # Step 1: Image Preprocessing
                     original_image = cv2.imread(img_path)
-                    preprocessor = ImagePreprocessor(original_image, self.image_collector)
+                    preprocessor = ImagePreprocessor(
+                        original_image, self.image_collector
+                    )
                     thresholded = preprocessor.preprocess()
 
                     # Step 2: Board Detection
-                    board_detector = BoardDetector(preprocessor.get_original(), thresholded, self.image_collector)
+                    board_detector = BoardDetector(
+                        preprocessor.get_original(), thresholded, self.image_collector
+                    )
                     warped_board = board_detector.detect()
 
                     # If both steps succeed, move the file to the 'ok' folder

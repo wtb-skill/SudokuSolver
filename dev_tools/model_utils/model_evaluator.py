@@ -6,7 +6,12 @@ import seaborn as sns
 import cv2
 from keras.api.models import load_model
 from keras.api.utils import to_categorical
-from sklearn.metrics import classification_report as skl_classification_report, confusion_matrix, roc_curve, auc
+from sklearn.metrics import (
+    classification_report as skl_classification_report,
+    confusion_matrix,
+    roc_curve,
+    auc,
+)
 from keras.api.preprocessing.image import img_to_array
 from sklearn.preprocessing import label_binarize
 from typing import List, Optional, Tuple
@@ -17,14 +22,17 @@ class ModelEvaluator:
     Evaluates a trained Keras image classification model using various metrics,
     including accuracy, confusion matrix, ROC curves, and misclassification analysis.
     """
-    def __init__(self,
-                 model_path: str,
-                 training_tests: bool = True,
-                 test_data: Optional[np.ndarray] = None,
-                 test_labels: Optional[np.ndarray] = None,
-                 dataset_path: Optional[str] = None,
-                 image_size: Tuple[int, int] = (32, 32),
-                 class_names: Optional[List[str]] = None):
+
+    def __init__(
+        self,
+        model_path: str,
+        training_tests: bool = True,
+        test_data: Optional[np.ndarray] = None,
+        test_labels: Optional[np.ndarray] = None,
+        dataset_path: Optional[str] = None,
+        image_size: Tuple[int, int] = (32, 32),
+        class_names: Optional[List[str]] = None,
+    ):
         """
         Initializes the evaluator, loads model and test data.
         """
@@ -34,10 +42,14 @@ class ModelEvaluator:
         if training_tests:
             self.test_data = test_data
             self.test_labels = test_labels
-            self.class_names = class_names if class_names else [str(i) for i in range(1, 10)]
+            self.class_names = (
+                class_names if class_names else [str(i) for i in range(1, 10)]
+            )
         else:
             print(f"[INFO] Loading external test data from: {dataset_path}")
-            self.test_data, self.test_labels, self.class_names = self.load_test_data(dataset_path, image_size)
+            self.test_data, self.test_labels, self.class_names = self.load_test_data(
+                dataset_path, image_size
+            )
 
         self.true_classes = self.test_labels.argmax(axis=1)
         self.predictions = self.model.predict(self.test_data)
@@ -60,20 +72,30 @@ class ModelEvaluator:
             return load_model(model_path)
         elif os.path.isdir(model_path):
             # Find the most recent model file in the directory
-            valid_extensions = ['.keras', '.h5']
-            model_files = [f for f in os.listdir(model_path) if any(f.endswith(ext) for ext in valid_extensions)]
+            valid_extensions = [".keras", ".h5"]
+            model_files = [
+                f
+                for f in os.listdir(model_path)
+                if any(f.endswith(ext) for ext in valid_extensions)
+            ]
 
             if len(model_files) == 0:
-                raise ValueError("No valid model files found in the specified directory.")
+                raise ValueError(
+                    "No valid model files found in the specified directory."
+                )
 
             # Get the most recent model file
-            latest_model_file = max(model_files, key=lambda f: os.path.getmtime(os.path.join(model_path, f)))
+            latest_model_file = max(
+                model_files, key=lambda f: os.path.getmtime(os.path.join(model_path, f))
+            )
             model_file_path = os.path.join(model_path, latest_model_file)
 
             print(f"[INFO] Loading model from directory: {model_file_path}")
             return load_model(model_file_path)
         else:
-            raise ValueError(f"Invalid model path: {model_path}. Must be a file or directory.")
+            raise ValueError(
+                f"Invalid model path: {model_path}. Must be a file or directory."
+            )
 
     @staticmethod
     def ensure_output_folder(path: str) -> None:
@@ -81,7 +103,9 @@ class ModelEvaluator:
         os.makedirs(path, exist_ok=True)
 
     @staticmethod
-    def load_test_data(dataset_path: str, image_size: Tuple[int, int] = (32, 32)) -> Tuple[np.ndarray, np.ndarray, List[str]]:
+    def load_test_data(
+        dataset_path: str, image_size: Tuple[int, int] = (32, 32)
+    ) -> Tuple[np.ndarray, np.ndarray, List[str]]:
         """
         Loads test images and labels from a directory structure.
         """
@@ -109,7 +133,9 @@ class ModelEvaluator:
                 test_labels.append(label)
 
         test_data = np.array(test_data)
-        test_labels = to_categorical(np.array(test_labels), num_classes=len(class_names))
+        test_labels = to_categorical(
+            np.array(test_labels), num_classes=len(class_names)
+        )
 
         print(f"[INFO] Loaded {len(test_data)} images from {len(class_names)} classes.")
         return test_data, test_labels, class_names
@@ -136,18 +162,22 @@ class ModelEvaluator:
         Returns:
             Tuple[float, float]: The loss and accuracy of the model on test data.
         """
-        loss, accuracy = self.model.evaluate(self.test_data, self.test_labels, verbose=1)
+        loss, accuracy = self.model.evaluate(
+            self.test_data, self.test_labels, verbose=1
+        )
         print(f"Test Loss: {loss:.4f}")
         print(f"Test Accuracy: {accuracy * 100:.2f}%")
 
         if save_path:
             fig, ax = plt.subplots(figsize=(5, 2))
-            ax.axis('tight')
-            ax.axis('off')
-            table_data = [["Metric", "Value"],
-                          ["Loss", f"{loss:.4f}"],
-                          ["Accuracy", f"{accuracy * 100:.2f}%"]]
-            table = ax.table(cellText=table_data, colLabels=None, loc='center')
+            ax.axis("tight")
+            ax.axis("off")
+            table_data = [
+                ["Metric", "Value"],
+                ["Loss", f"{loss:.4f}"],
+                ["Accuracy", f"{accuracy * 100:.2f}%"],
+            ]
+            table = ax.table(cellText=table_data, colLabels=None, loc="center")
             table.auto_set_font_size(False)
             table.set_fontsize(12)
             table.scale(1, 1.5)
@@ -177,13 +207,13 @@ class ModelEvaluator:
             plt.figure(figsize=(10, 6))
             sns.barplot(x=self.class_names, y=per_class_acc, palette="viridis")
 
-            plt.title("Per-Class Accuracy", fontsize=14, weight='bold', pad=20)
+            plt.title("Per-Class Accuracy", fontsize=14, weight="bold", pad=20)
             plt.xlabel("Class", fontsize=12)
             plt.ylabel("Accuracy", fontsize=12)
             plt.ylim(0, 1.05)
 
             for i, acc in enumerate(per_class_acc):
-                plt.text(i, acc + 0.02, f"{acc:.2%}", ha='center', fontsize=10)
+                plt.text(i, acc + 0.02, f"{acc:.2%}", ha="center", fontsize=10)
 
             plt.tight_layout()
             plt.savefig(save_path)
@@ -194,13 +224,15 @@ class ModelEvaluator:
 
     def classification_report(self, save_path: Optional[str] = None) -> str:
         """Generates a classification report and optionally saves it as an image."""
-        report = skl_classification_report(self.true_classes, self.predicted_classes, target_names=self.class_names)
+        report = skl_classification_report(
+            self.true_classes, self.predicted_classes, target_names=self.class_names
+        )
         print("\nClassification Report:\n", report)
 
         if save_path:
             plt.figure(figsize=(10, 6))
-            plt.text(0.01, 1, report, {'fontsize': 12}, fontfamily='monospace')
-            plt.axis('off')
+            plt.text(0.01, 1, report, {"fontsize": 12}, fontfamily="monospace")
+            plt.axis("off")
             plt.tight_layout()
             plt.savefig(save_path)
             print(f"[INFO] Classification report saved to {save_path}")
@@ -210,20 +242,24 @@ class ModelEvaluator:
 
     def roc_curve(self, save_path: Optional[str] = None) -> None:
         """Plots ROC curve per class and optionally saves the plot."""
-        y_true_bin = label_binarize(self.true_classes, classes=np.arange(len(self.class_names)))
+        y_true_bin = label_binarize(
+            self.true_classes, classes=np.arange(len(self.class_names))
+        )
         y_pred_bin = self.predictions
         plt.figure(figsize=(10, 6))
 
         for i in range(len(self.class_names)):
             fpr, tpr, _ = roc_curve(y_true_bin[:, i], y_pred_bin[:, i])
             roc_auc = auc(fpr, tpr)
-            plt.plot(fpr, tpr, label=f'Class {self.class_names[i]} (AUC = {roc_auc:.2f})')
+            plt.plot(
+                fpr, tpr, label=f"Class {self.class_names[i]} (AUC = {roc_auc:.2f})"
+            )
 
-        plt.plot([0, 1], [0, 1], 'k--')
-        plt.xlabel('False Positive Rate')
-        plt.ylabel('True Positive Rate')
-        plt.title('Receiver Operating Characteristic (ROC) Curve')
-        plt.legend(loc='lower right')
+        plt.plot([0, 1], [0, 1], "k--")
+        plt.xlabel("False Positive Rate")
+        plt.ylabel("True Positive Rate")
+        plt.title("Receiver Operating Characteristic (ROC) Curve")
+        plt.legend(loc="lower right")
 
         if save_path:
             plt.tight_layout()
@@ -235,8 +271,14 @@ class ModelEvaluator:
         """Plots and optionally saves confusion matrix."""
         cm = confusion_matrix(self.true_classes, self.predicted_classes)
         plt.figure(figsize=(8, 6))
-        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
-                    xticklabels=self.class_names, yticklabels=self.class_names)
+        sns.heatmap(
+            cm,
+            annot=True,
+            fmt="d",
+            cmap="Blues",
+            xticklabels=self.class_names,
+            yticklabels=self.class_names,
+        )
         plt.xlabel("Predicted Label")
         plt.ylabel("True Label")
         plt.title("Confusion Matrix")
@@ -246,13 +288,18 @@ class ModelEvaluator:
         plt.close()
         return cm
 
-    def analyze_misclassifications(self, save_path: Optional[str] = None, top_n: int = 10) -> List[Tuple[Tuple[str, str], int]]:
+    def analyze_misclassifications(
+        self, save_path: Optional[str] = None, top_n: int = 10
+    ) -> List[Tuple[Tuple[str, str], int]]:
         """Analyzes and plots top misclassified label pairs."""
         cm = confusion_matrix(self.true_classes, self.predicted_classes)
         np.fill_diagonal(cm, 0)
-        misclassifications = [((self.class_names[i], self.class_names[j]), cm[i, j])
-                              for i in range(len(self.class_names))
-                              for j in range(len(self.class_names)) if cm[i, j] > 0]
+        misclassifications = [
+            ((self.class_names[i], self.class_names[j]), cm[i, j])
+            for i in range(len(self.class_names))
+            for j in range(len(self.class_names))
+            if cm[i, j] > 0
+        ]
         misclassifications.sort(key=lambda x: x[1], reverse=True)
         top_misclassifications = misclassifications[:top_n]
 
@@ -277,14 +324,19 @@ class ModelEvaluator:
 
         return top_misclassifications
 
-    def analyze_confused_classes(self, top_n: int = 5, save_path: Optional[str] = None) -> List[Tuple[str, str, int]]:
+    def analyze_confused_classes(
+        self, top_n: int = 5, save_path: Optional[str] = None
+    ) -> List[Tuple[str, str, int]]:
         """Finds and plots the most confused class pairs."""
         cm = confusion_matrix(self.true_classes, self.predicted_classes)
         np.fill_diagonal(cm, 0)
 
-        misclassifications = [(self.class_names[i], self.class_names[j], cm[i, j])
-                              for i in range(len(self.class_names))
-                              for j in range(len(self.class_names)) if cm[i, j] > 0]
+        misclassifications = [
+            (self.class_names[i], self.class_names[j], cm[i, j])
+            for i in range(len(self.class_names))
+            for j in range(len(self.class_names))
+            if cm[i, j] > 0
+        ]
         misclassifications.sort(key=lambda x: x[2], reverse=True)
         most_confused = misclassifications[:top_n]
 
@@ -309,7 +361,9 @@ class ModelEvaluator:
 
         return most_confused
 
-    def view_misclassified_images(self, num_images: int = 10, save_path: Optional[str] = None) -> None:
+    def view_misclassified_images(
+        self, num_images: int = 10, save_path: Optional[str] = None
+    ) -> None:
         """
         Displays and optionally saves a grid of randomly selected misclassified images.
 
@@ -322,7 +376,9 @@ class ModelEvaluator:
             print("[INFO] No misclassified samples to display.")
             return
 
-        selected_idxs = np.random.choice(misclassified_idxs, min(num_images, len(misclassified_idxs)), replace=False)
+        selected_idxs = np.random.choice(
+            misclassified_idxs, min(num_images, len(misclassified_idxs)), replace=False
+        )
 
         max_per_row = 10
         num_cols = min(max_per_row, len(selected_idxs))
@@ -335,7 +391,8 @@ class ModelEvaluator:
             plt.imshow(self.test_data[idx].squeeze(), cmap="gray")
             plt.title(
                 f"Pred: {self.class_names[self.predicted_classes[idx]]}\nTrue: {self.class_names[self.true_classes[idx]]}",
-                fontsize=8)
+                fontsize=8,
+            )
             plt.axis("off")
 
         if save_path:
@@ -344,7 +401,11 @@ class ModelEvaluator:
             print(f"[INFO] Misclassified images saved to {save_path}")
         plt.close()
 
-    def run(self, num_misclassified_images: int = 50, results_output_path: str = "evaluation_results/evaluation_results.json") -> None:
+    def run(
+        self,
+        num_misclassified_images: int = 50,
+        results_output_path: str = "evaluation_results/evaluation_results.json",
+    ) -> None:
         """
         Runs the full evaluation pipeline, saving results to the output directory.
         """
@@ -352,24 +413,36 @@ class ModelEvaluator:
         self.ensure_output_folder(output_dir)
 
         self.evaluate_model(save_path=os.path.join(output_dir, "model_evaluation.jpg"))
-        self.per_class_accuracy(save_path=os.path.join(output_dir, "per_class_accuracy.jpg"))
-        self.classification_report(save_path=os.path.join(output_dir, "classification_report.jpg"))
+        self.per_class_accuracy(
+            save_path=os.path.join(output_dir, "per_class_accuracy.jpg")
+        )
+        self.classification_report(
+            save_path=os.path.join(output_dir, "classification_report.jpg")
+        )
         self.roc_curve(save_path=os.path.join(output_dir, "roc_curve.jpg"))
-        self.confusion_matrix(save_path=os.path.join(output_dir, "confusion_matrix.jpg"))
-        self.show_test_distribution(save_path=os.path.join(output_dir, "test_distribution.jpg"))
-        self.analyze_misclassifications(save_path=os.path.join(output_dir, "top_misclassifications.jpg"))
-        self.analyze_confused_classes(save_path=os.path.join(output_dir, "analyze_confused_classes.jpg"))
-        self.view_misclassified_images(num_misclassified_images, save_path=os.path.join(output_dir, "misclassified_samples.jpg"))
+        self.confusion_matrix(
+            save_path=os.path.join(output_dir, "confusion_matrix.jpg")
+        )
+        self.show_test_distribution(
+            save_path=os.path.join(output_dir, "test_distribution.jpg")
+        )
+        self.analyze_misclassifications(
+            save_path=os.path.join(output_dir, "top_misclassifications.jpg")
+        )
+        self.analyze_confused_classes(
+            save_path=os.path.join(output_dir, "analyze_confused_classes.jpg")
+        )
+        self.view_misclassified_images(
+            num_misclassified_images,
+            save_path=os.path.join(output_dir, "misclassified_samples.jpg"),
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     MODEL_PATH = "../../models/currently_used"
     TEST_DATASET_PATH = "../data_utils/test_dataset"
 
     evaluator = ModelEvaluator(
-        model_path=MODEL_PATH,
-        training_tests=False,
-        dataset_path=TEST_DATASET_PATH
+        model_path=MODEL_PATH, training_tests=False, dataset_path=TEST_DATASET_PATH
     )
     evaluator.run()
-

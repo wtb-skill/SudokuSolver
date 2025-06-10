@@ -12,7 +12,12 @@ logger = logging.getLogger(__name__)
 
 
 class BoardDetector:
-    def __init__(self, original_image: np.ndarray, thresholded: np.ndarray, image_collector: ImageCollector):
+    def __init__(
+        self,
+        original_image: np.ndarray,
+        thresholded: np.ndarray,
+        image_collector: ImageCollector,
+    ):
         self.original_image = original_image
         self.thresholded = thresholded
         self.image_collector = image_collector
@@ -29,14 +34,18 @@ class BoardDetector:
             self.warped = self.warp_board(corners, label="Fallback_Warped_Sudoku_Board")
         return self.warped
 
-    def warp_board(self, board_corners: np.ndarray, label: str = "Warped_Sudoku_Board") -> np.ndarray:
+    def warp_board(
+        self, board_corners: np.ndarray, label: str = "Warped_Sudoku_Board"
+    ) -> np.ndarray:
         gray = cv2.cvtColor(self.original_image, cv2.COLOR_BGR2GRAY)
         warped = four_point_transform(gray, board_corners)
         self.image_collector.add_image(label, warped)
         return warped
 
     def _detect_contour_corners(self) -> np.ndarray:
-        contours = cv2.findContours(self.thresholded.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        contours = cv2.findContours(
+            self.thresholded.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+        )
         contours = imutils.grab_contours(contours)
         contours = sorted(contours, key=cv2.contourArea, reverse=True)
 
@@ -64,24 +73,34 @@ class BoardDetector:
         hull = cv2.convexHull(corners)
         if len(hull) != 4:
             return False
-        side_lengths = [np.linalg.norm(corners[i] - corners[(i + 1) % 4]) for i in range(4)]
+        side_lengths = [
+            np.linalg.norm(corners[i] - corners[(i + 1) % 4]) for i in range(4)
+        ]
         ratio = max(side_lengths) / min(side_lengths)
         if ratio > 1.5:
             return False
+
         def is_parallel(p1, p2, p3, p4):
             vec1 = p2 - p1
             vec2 = p4 - p3
-            dot_product = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+            dot_product = np.dot(vec1, vec2) / (
+                np.linalg.norm(vec1) * np.linalg.norm(vec2)
+            )
             return abs(dot_product) > 0.9
-        if not (is_parallel(corners[0], corners[1], corners[3], corners[2]) and
-                is_parallel(corners[0], corners[3], corners[1], corners[2])):
+
+        if not (
+            is_parallel(corners[0], corners[1], corners[3], corners[2])
+            and is_parallel(corners[0], corners[3], corners[1], corners[2])
+        ):
             return False
         return True
 
     def detect_fallback(self) -> np.ndarray:
         debug_img = self.original_image.copy()
         edges = cv2.Canny(self.thresholded, 50, 150, apertureSize=3)
-        lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=100, minLineLength=100, maxLineGap=10)
+        lines = cv2.HoughLinesP(
+            edges, 1, np.pi / 180, threshold=100, minLineLength=100, maxLineGap=10
+        )
         if lines is None:
             raise Exception("Fallback failed: No lines detected.")
 
@@ -98,20 +117,27 @@ class BoardDetector:
         bottom_left = min(points, key=lambda p: p[0] - p[1])
         bottom_right = max(points, key=lambda p: p[0] + p[1])
 
-        fallback_corners = np.array([
-            top_left,
-            top_right,
-            bottom_right,
-            bottom_left
-        ], dtype=np.float32)
+        fallback_corners = np.array(
+            [top_left, top_right, bottom_right, bottom_left], dtype=np.float32
+        )
 
         if not self.is_valid_board(fallback_corners):
-            raise Exception("Fallback failed: Detected structure is not a valid Sudoku board.")
+            raise Exception(
+                "Fallback failed: Detected structure is not a valid Sudoku board."
+            )
 
         corner_debug = debug_img.copy()
         for idx, pt in enumerate(fallback_corners):
             cv2.circle(corner_debug, tuple(pt.astype(int)), 6, (0, 0, 255), -1)
-            cv2.putText(corner_debug, f"P{idx}", tuple(pt.astype(int) + 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+            cv2.putText(
+                corner_debug,
+                f"P{idx}",
+                tuple(pt.astype(int) + 5),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (0, 255, 0),
+                1,
+            )
 
         self.image_collector.add_image("Fallback_Corners", corner_debug)
         return fallback_corners

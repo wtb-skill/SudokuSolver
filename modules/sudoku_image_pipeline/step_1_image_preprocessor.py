@@ -61,8 +61,7 @@ class ImagePreprocessor:
         #     processed = blurred
 
         self.thresholded = cv2.adaptiveThreshold(
-            processed, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-            cv2.THRESH_BINARY, 11, 2
+            processed, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
         )
 
         self.image_collector.add_image("Thresholded_Edges", self.thresholded)
@@ -99,14 +98,16 @@ class ImagePreprocessor:
         close = cv2.morphologyEx(
             gray,
             cv2.MORPH_CLOSE,
-            cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (dsize, dsize))
+            cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (dsize, dsize)),
         )
         div = (np.uint16(gray) * 256) / np.uint16(close)
         normalized = np.uint8(cv2.normalize(div, None, 0, 255, cv2.NORM_MINMAX))
         self.image_collector.add_image("Normalized_Brightness", normalized)
         return normalized
 
-    def needs_normalization(self, gray: np.ndarray, tile_size: int = 50, std_threshold: float = 20.0) -> bool:
+    def needs_normalization(
+        self, gray: np.ndarray, tile_size: int = 50, std_threshold: float = 20.0
+    ) -> bool:
         """
         Determine if local brightness variation suggests uneven lighting.
 
@@ -123,7 +124,7 @@ class ImagePreprocessor:
 
         for y in range(0, h, tile_size):
             for x in range(0, w, tile_size):
-                tile = gray[y:min(y + tile_size, h), x:min(x + tile_size, w)]
+                tile = gray[y : min(y + tile_size, h), x : min(x + tile_size, w)]
                 stds.append(np.std(tile))
 
         variation = np.std(stds)
@@ -146,4 +147,3 @@ class ImagePreprocessor:
         spread = np.sum(hist[10:245])
         # self.image_collector.add_debug_info("Histogram_Spread", float(spread))
         return spread < threshold
-

@@ -4,6 +4,7 @@ import numpy as np
 from keras.api.preprocessing.image import img_to_array
 from modules.utils.types import *
 
+
 class DigitPreprocessor:
     """
     A utility class for preprocessing digit images in a Sudoku grid.
@@ -24,6 +25,7 @@ class DigitPreprocessor:
             ProcessedDigitGrid: A 9x9 grid where each non-empty cell contains a preprocessed
                        4D NumPy array ready for model prediction. Empty cells remain None.
         """
+
         def prep(cell: DigitImage) -> ProcessedDigitImage:
             resized = cv2.resize(cell, (32, 32))
             normalized = resized.astype("float") / 255.0
@@ -31,8 +33,6 @@ class DigitPreprocessor:
             return np.expand_dims(arr, axis=0)
 
         processed_grid: ProcessedDigitGrid = [
-            [prep(cell) if cell is not None else None for cell in row]
-            for row in digits
+            [prep(cell) if cell is not None else None for cell in row] for row in digits
         ]
         return processed_grid
-

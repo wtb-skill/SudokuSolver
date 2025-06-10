@@ -1,5 +1,13 @@
 from keras.api.models import Sequential
-from keras.api.layers import Conv2D, MaxPooling2D, Activation, Flatten, Dense, Dropout, Input
+from keras.api.layers import (
+    Conv2D,
+    MaxPooling2D,
+    Activation,
+    Flatten,
+    Dense,
+    Dropout,
+    Input,
+)
 from keras.api.models import Model
 
 
@@ -25,33 +33,30 @@ class SudokuNet:
         - Model: A compiled Keras Sequential model.
         """
         # Initialize the model with an explicit Input layer
-        model = Sequential([
-            Input(shape=(height, width, depth)),
-
-            # First set of CONV => RELU => POOL layers
-            Conv2D(32, (5, 5), padding="same"),
-            Activation("relu"),
-            MaxPooling2D(pool_size=(2, 2)),
-
-            # Second set of CONV => RELU => POOL layers
-            Conv2D(32, (3, 3), padding="same"),
-            Activation("relu"),
-            MaxPooling2D(pool_size=(2, 2)),
-
-            # First set of FC => RELU layers
-            Flatten(),
-            Dense(64),
-            Activation("relu"),
-            Dropout(0.5),
-
-            # Second set of FC => RELU layers
-            Dense(64),
-            Activation("relu"),
-            Dropout(0.5),
-
-            # Softmax classifier
-            Dense(classes),
-            Activation("softmax")
-        ])
+        model = Sequential(
+            [
+                Input(shape=(height, width, depth)),
+                # First set of CONV => RELU => POOL layers
+                Conv2D(32, (5, 5), padding="same"),
+                Activation("relu"),
+                MaxPooling2D(pool_size=(2, 2)),
+                # Second set of CONV => RELU => POOL layers
+                Conv2D(32, (3, 3), padding="same"),
+                Activation("relu"),
+                MaxPooling2D(pool_size=(2, 2)),
+                # First set of FC => RELU layers
+                Flatten(),
+                Dense(64),
+                Activation("relu"),
+                Dropout(0.5),
+                # Second set of FC => RELU layers
+                Dense(64),
+                Activation("relu"),
+                Dropout(0.5),
+                # Softmax classifier
+                Dense(classes),
+                Activation("softmax"),
+            ]
+        )
 
         return model

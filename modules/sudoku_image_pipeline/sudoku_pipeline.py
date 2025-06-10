@@ -36,14 +36,18 @@ class SudokuPipeline:
         if isinstance(image_file, str):
             self.image = cv2.imread(image_file)
             if self.image is None:
-                raise ValueError(f"Image could not be loaded from path: {image_file}. Check the file content.")
+                raise ValueError(
+                    f"Image could not be loaded from path: {image_file}. Check the file content."
+                )
         elif isinstance(image_file, FileStorage):
             file_bytes = np.frombuffer(image_file.read(), np.uint8)
             self.image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
             if self.image is None:
                 raise ValueError("Image could not be loaded. Check the file content.")
         else:
-            raise ValueError("image_file must be a string (path) or a FileStorage object.")
+            raise ValueError(
+                "image_file must be a string (path) or a FileStorage object."
+            )
 
     def process_sudoku_image(self) -> ProcessedDigitGrid:
         """
@@ -57,7 +61,9 @@ class SudokuPipeline:
         thresholded = preprocessor.preprocess()
 
         logger.info("Detecting Sudoku board...")
-        detector = BoardDetector(preprocessor.get_original(), thresholded, self.image_collector)
+        detector = BoardDetector(
+            preprocessor.get_original(), thresholded, self.image_collector
+        )
         warped = detector.detect()
 
         logger.info("Extracting digits from Sudoku cells...")
