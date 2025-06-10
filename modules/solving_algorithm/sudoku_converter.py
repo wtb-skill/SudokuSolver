@@ -44,3 +44,21 @@ class SudokuConverter:
                 board[row_idx, col_idx] = int(sudoku_dict[key])
 
         return board
+
+    @staticmethod
+    def labels_to_board(labels: list[int]) -> np.ndarray:
+        """
+        Converts a flat list of 81 labels into a 9x9 numpy array.
+
+        Args:
+            labels (list[int]): A flat list of 81 integers representing cell values.
+
+        Returns:
+            np.ndarray: A 9x9 numpy array board.
+
+        Raises:
+            ValueError: If the input list is not of length 81.
+        """
+        if len(labels) != 81:
+            raise ValueError("Expected exactly 81 labels to form a 9x9 board.")
+        return np.array([labels[i:i + 9] for i in range(0, 81, 9)])

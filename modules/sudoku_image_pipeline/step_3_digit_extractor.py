@@ -5,7 +5,7 @@ import imutils
 from skimage.segmentation import clear_border
 from typing import Optional
 from modules.debug import ImageCollector
-from modules.types import *
+from modules.utils.types import *
 
 class DigitExtractor:
     """

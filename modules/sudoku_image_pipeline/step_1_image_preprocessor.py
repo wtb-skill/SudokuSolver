@@ -68,34 +68,6 @@ class ImagePreprocessor:
         self.image_collector.add_image("Thresholded_Edges", self.thresholded)
         return self.thresholded
 
-    # def preprocess(self, normalize: bool = True) -> np.ndarray:
-    #     """
-    #     Perform grayscale conversion, optional brightness normalization,
-    #     blurring, and adaptive thresholding.
-    #
-    #     Args:
-    #         normalize (bool): Whether to perform brightness normalization.
-    #
-    #     Returns:
-    #         np.ndarray: The thresholded binary image.
-    #     """
-    #     self.gray = cv2.cvtColor(self.original_image, cv2.COLOR_BGR2GRAY)
-    #     blurred = cv2.GaussianBlur(self.gray, (7, 7), 3)
-    #
-    #     if normalize and (self.needs_normalization(blurred) or self.is_low_contrast(blurred)):
-    #         processed = self.normalize_brightness(gray=blurred)
-    #     else:
-    #         processed = blurred
-    #
-    #     self.thresholded = cv2.adaptiveThreshold(
-    #         processed, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-    #         cv2.THRESH_BINARY, 11, 2
-    #     )
-    #     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-    #     cleaned = cv2.morphologyEx(self.thresholded, cv2.MORPH_CLOSE, kernel)
-    #     self.image_collector.add_image("Thresholded_Edges", cleaned)
-    #     return cleaned
-
     def get_original(self) -> np.ndarray:
         """
         Get the resized original image.
@@ -175,8 +147,3 @@ class ImagePreprocessor:
         # self.image_collector.add_debug_info("Histogram_Spread", float(spread))
         return spread < threshold
 
-    # not used, check later
-    def apply_edge_enhancement(self, gray: np.ndarray) -> np.ndarray:
-        laplacian = cv2.Laplacian(gray, cv2.CV_64F)
-        sharp = cv2.convertScaleAbs(gray + 0.5 * laplacian)
-        return sharp

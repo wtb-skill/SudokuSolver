@@ -2,7 +2,7 @@
 import cv2
 import numpy as np
 from keras.api.preprocessing.image import img_to_array
-from modules.types import *
+from modules.utils.types import *
 
 class DigitPreprocessor:
     """

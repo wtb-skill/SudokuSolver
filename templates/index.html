@@ -6,10 +6,21 @@
     <title>Sudoku Solver</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display&family=Merriweather&family=Cormorant+Garamond&family=Lora&family=Quicksand&display=swap" rel="stylesheet">
-
 </head>
 <body>
     <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="flashes">
+              {% for category, message in messages %}
+                <div class="flash-message {{ category }}">
+                  {{ message }}
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
         <h1>Welcome to Sudoku Solver</h1>
         <p>Upload an image of an unsolved Sudoku puzzle, and let AI solve it for you!</p>
 
@@ -19,6 +30,8 @@
         </form>
         <img src="{{ url_for('static', filename='logo_1.jpg') }}" alt="Logo" class="logo-image">
     </div>
+
+<script src="{{ url_for('static', filename='scripts.js') }}"></script>
+
 </body>
 </html>
-

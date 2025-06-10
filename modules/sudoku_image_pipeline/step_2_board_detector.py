@@ -1,5 +1,4 @@
 # modules/sudoku_image/step_2_board_detector.py
-
 import cv2
 import imutils
 import numpy as np
@@ -36,23 +35,8 @@ class BoardDetector:
         self.image_collector.add_image(label, warped)
         return warped
 
-    # def auto_canny(image: np.ndarray, sigma: float = 0.33) -> np.ndarray:
-    #     # Compute the median of the pixel intensities
-    #     v = np.median(image)
-    #
-    #     # Set lower and upper thresholds based on sigma
-    #     lower = int(max(0, (1.0 - sigma) * v))
-    #     upper = int(min(255, (1.0 + sigma) * v))
-    #
-    #     # Apply Canny edge detection with auto-calculated thresholds
-    #     edged = cv2.Canny(image, lower, upper)
-    #     return edged
-
     def _detect_contour_corners(self) -> np.ndarray:
         contours = cv2.findContours(self.thresholded.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        # edges = BoardDetector.auto_canny(self.thresholded)
-        # contours = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
         contours = imutils.grab_contours(contours)
         contours = sorted(contours, key=cv2.contourArea, reverse=True)
 
@@ -75,6 +59,24 @@ class BoardDetector:
         self.image_collector.add_image("Detected_Sudoku_Outline", outline_img)
 
         return approx.reshape(4, 2).astype(np.float32)
+
+    def is_valid_board(self, corners: np.ndarray) -> bool:
+        hull = cv2.convexHull(corners)
+        if len(hull) != 4:
+            return False
+        side_lengths = [np.linalg.norm(corners[i] - corners[(i + 1) % 4]) for i in range(4)]
+        ratio = max(side_lengths) / min(side_lengths)
+        if ratio > 1.5:
+            return False
+        def is_parallel(p1, p2, p3, p4):
+            vec1 = p2 - p1
+            vec2 = p4 - p3
+            dot_product = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+            return abs(dot_product) > 0.9
+        if not (is_parallel(corners[0], corners[1], corners[3], corners[2]) and
+                is_parallel(corners[0], corners[3], corners[1], corners[2])):
+            return False
+        return True
 
     def detect_fallback(self) -> np.ndarray:
         debug_img = self.original_image.copy()
@@ -102,6 +104,9 @@ class BoardDetector:
             bottom_right,
             bottom_left
         ], dtype=np.float32)
+
+        if not self.is_valid_board(fallback_corners):
+            raise Exception("Fallback failed: Detected structure is not a valid Sudoku board.")
 
         corner_debug = debug_img.copy()
         for idx, pt in enumerate(fallback_corners):

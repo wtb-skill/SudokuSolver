@@ -1,11 +1,9 @@
 # modules/user_data_collector.py
 import os
 import cv2
-import pickle
 import numpy as np
 from uuid import uuid4
 from typing import List
-from flask.sessions import SessionMixin
 
 class UserDataCollector:
     def __init__(self, label_folder: str = 'collected_data'):
@@ -17,33 +15,6 @@ class UserDataCollector:
             label_folder (str): The folder where the labeled images will be stored. Defaults to 'collected_data'.
         """
         self.label_folder = label_folder
-
-    @staticmethod
-    def load_digit_images_from_session(session: SessionMixin) -> List[np.ndarray]:
-        """
-        Loads digit images from a session object.
-
-        Parameters:
-            session (dict): A dictionary containing session data, where 'digit_images' is expected to be pickled.
-
-        Returns:
-            List[np.ndarray]: A list of images (as numpy arrays) extracted from the session.
-
-        Raises:
-            ValueError: If 'digit_images' is not found in the session or the data is invalid.
-        """
-        pickled_data = session.pop('digit_images', None)
-        if pickled_data is None:
-            raise ValueError("Missing digit images in session")
-
-        # Ensure that pickled_data is a valid bytes-like object
-        if not isinstance(pickled_data, (bytes, bytearray)):
-            raise ValueError("Invalid data format for 'digit_images', expected a bytes-like object")
-
-        try:
-            return pickle.loads(pickled_data)
-        except pickle.UnpicklingError as e:
-            raise ValueError("Failed to unpickle 'digit_images'") from e
 
     @staticmethod
     def validate_labels(digit_images: List[np.ndarray], labels: List[int]) -> None:

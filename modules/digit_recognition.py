@@ -3,7 +3,7 @@ import logging
 from keras.api.models import load_model
 import numpy as np
 import os
-from modules.types import *
+from modules.utils.types import *
 
 # Create a logger for this module
 logger = logging.getLogger(__name__)

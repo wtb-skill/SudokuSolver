@@ -5,18 +5,16 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 from flask import (Blueprint, render_template, request, redirect, send_from_directory, send_file, abort, session,
-                   Response)
+                   flash, get_flashed_messages, Response)
 from modules.digit_recognition import SudokuDigitRecognizer
 from modules.debug import ImageCollector
 from modules.board_display import SudokuBoardDisplay
 from modules.solving_algorithm.norvig_solver import NorvigSolver
 from modules.solving_algorithm.sudoku_converter import SudokuConverter
 from modules.sudoku_image_pipeline.sudoku_pipeline import SudokuPipeline
-from modules.user_data_collector import UserDataCollector
-import pickle
-import numpy as np
-import json
-from pathlib import Path
+from modules.utils.user_data_collector import UserDataCollector
+from modules.utils.session_utils import store_digit_images, load_digit_images, store_board, load_board, store_filename, load_filename
+from modules.utils.test_data_manager import save_test_board
 
 
 # Initialize Blueprint
@@ -36,9 +34,10 @@ def home() -> str:
     Returns:
         str: The rendered HTML template for the home page.
     """
-    session.clear()  # Clears all session data
+    flashes = get_flashed_messages(with_categories=True)
+    session.clear()
     image_collector.reset()
-    return render_template('index.html')
+    return render_template('index.html', flashes=flashes)
 
 @sudoku_bp.route('/process-sudoku-image', methods=['POST'])
 def process_sudoku_image() -> str or Response:
@@ -83,20 +82,14 @@ def process_sudoku_image() -> str or Response:
 
             if not solved_grid:
                 # debug:
-                image_collector.display_images_in_grid()
-                image_collector.save_images()
+                # image_collector.display_images_in_grid()
+                # image_collector.save_images()
 
-                # Store the digits grid temporarily
+                # Store data in the session
                 digit_images = image_collector.digit_cells
-                pickled_digit_images = pickle.dumps(digit_images)  # Pickle the digit grid
-                session['digit_images'] = pickled_digit_images
-
-                # Store the unsolved board in the session
-                session['unsolved_board'] = unsolved_board.tolist()  # Convert to list to store in session
-
-                # Store the filename in the session
-                if hasattr(file, 'filename'):
-                    session['filename'] = file.filename
+                store_digit_images(session=session, digit_images=digit_images)
+                store_board(session=session, board=unsolved_board)
+                store_filename(session=session, filename=file.filename)
 
                 return render_template('no_solution.html')
 
@@ -107,7 +100,7 @@ def process_sudoku_image() -> str or Response:
             sudoku_board_display.draw_solved_board(unsolved_board=unsolved_board, solved_board=solved_board)
 
             # debug:
-            image_collector.display_images_in_grid()
+            # image_collector.display_images_in_grid()
             # image_collector.save_images()
 
             # Render the solution page
@@ -151,15 +144,11 @@ def get_debug_image(step_name) -> Response:
 def handle_collect_decision() -> str or Response:
     """
     Handles the user's decision to either collect data or go back to the home page.
-
-    Returns:
-        str: The rendered template based on the user's decision.
     """
     if request.form.get('collect_data') == 'YES':
-        # Extract unsolved board from debug
-        unsolved_board = session.pop('unsolved_board', None)
-
-        if unsolved_board is None:
+        try:
+            unsolved_board = load_board(session=session)
+        except (KeyError, TypeError, ValueError):
             return "Error: No unsolved board found.", 400
 
         return render_template('collect_user_data.html', sudoku_grid=unsolved_board)
@@ -182,47 +171,22 @@ def correct_and_solve() -> str or Response:
         labels_no_zeros = [num for num in labels_81 if num != 0]
 
         # Step 2: Load and validate digit images
+        digit_images = load_digit_images(session)
         collector = UserDataCollector()
-        digit_images = collector.load_digit_images_from_session(session)
         collector.validate_labels(digit_images, labels_no_zeros)
 
         # Step 3: Save labeled data
         collector.save_labeled_data(digit_images, labels_no_zeros)
 
         # Step 4: Build corrected board from labels (9x9)
-        corrected_board = np.array([labels_81[i:i + 9] for i in range(0, len(labels), 9)])
+        converter = SudokuConverter()
+        corrected_board = converter.labels_to_board(labels_81)
 
-        # Step 4.5: Save corrected board to test.json ---
-        # Build the test.json path nicely
-        project_root = Path(__file__).resolve().parent.parent
-        test_json_path = project_root / 'dev_tools' / 'model_utils' / 'test.json'
-
-        # Ensure the parent directory exists
-        test_json_path.parent.mkdir(parents=True, exist_ok=True)
-
-        filename = session.get('filename')
-
-        if filename:
-            test_data = {}
-
-            # If file exists, load it
-            if test_json_path.exists():
-                with open(test_json_path, 'r') as json_file:
-                    test_data = json.load(json_file)
-            else:
-                # If not, create an empty JSON
-                with open(test_json_path, 'w') as json_file:
-                    json.dump({}, json_file, indent=4)
-
-            # Update the test data
-            if filename not in test_data:
-                test_data[filename] = corrected_board.tolist()
-
-                with open(test_json_path, 'w') as json_file:
-                    json.dump(test_data, json_file, indent=4)
+        # Optional: Save data for EWA test
+        filename = load_filename(session=session)
+        save_test_board(filename=filename, board=corrected_board, save=False)
 
         # Step 5: Convert to solver grid format
-        converter = SudokuConverter()
         sudoku_grid = converter.board_to_string(corrected_board)
 
         # Step 6: Solve the puzzle
@@ -230,7 +194,9 @@ def correct_and_solve() -> str or Response:
         solved_grid = solver.solve(grid=sudoku_grid)
 
         if not solved_grid:
-            return "Sudoku still cannot be solved with corrected input.", 400
+            flash("Sudoku still cannot be solved with the corrected input. Please try another puzzle.", "warning")
+            print("It should work.")
+            return redirect('/')
 
         # Step 7: Display solution
         display = SudokuBoardDisplay(image_collector=image_collector)

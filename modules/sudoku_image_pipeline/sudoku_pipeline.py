@@ -9,7 +9,7 @@ from modules.sudoku_image_pipeline.step_1_image_preprocessor import ImagePreproc
 from modules.sudoku_image_pipeline.step_2_board_detector import BoardDetector
 from modules.sudoku_image_pipeline.step_3_digit_extractor import DigitExtractor
 from modules.sudoku_image_pipeline.step_4_digit_preprocessor import DigitPreprocessor
-from modules.types import ProcessedDigitGrid
+from modules.utils.types import ProcessedDigitGrid
 from modules.debug import ImageCollector
 
 # Create a logger for this module
