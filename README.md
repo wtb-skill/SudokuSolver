@@ -22,16 +22,13 @@ interactive web interface for users to upload images and view results in real ti
 ├── app.py                           # Flask app entry point
 │
 ├── routes/
-│   ├── sudoku_solver.py                      # Blueprint for handling web routes and application logic
-│   └── dev_tools.py
+│   ├── sudoku_solver.py                      # Blueprint for handling web routes and main pipeline logic
+│   └── dev_tools.py                          # Blueprint for handling web routes and dev_tools logic
 │
 ├── modules/
 │   ├── board_display.py             # Generates visual representations of Sudoku boards
 │   ├── debug.py                     # Tools for image collection and debugging
 │   ├── digit_recognition.py         # CNN-based digit recognition from image patches
-│   ├── types.py                     # 
-│   ├── user_data_collector.py       # Handles collection and validation of user-labeled data
-│   ├── verification.py              # 
 │   ├── sudoku_image_pipeline/
 │   │    ├── step_1_image_preprocessor.py   # Preprocesses raw image (grayscale, blur, thresholding)
 │   │    ├── step_2_board_detector.py       # Detects and warps the Sudoku board from the image
@@ -39,9 +36,11 @@ interactive web interface for users to upload images and view results in real ti
 │   │    ├── step_4_digit_preprocessor.py   # Normalizes digits for model prediction
 │   │    └── sudoku_pipeline.py             # Orchestrates full Sudoku image processing pipeline
 │   │
-│   └── solving_algorithm/
-│       ├── norvig_solver.py             # Norvig-style backtracking algorithm to solve Sudoku
-│       └── sudoku_converter.py          # Converts between board matrix and string/dictionary formats
+│   ├── solving_algorithm/
+│   │   ├── norvig_solver.py             # Norvig-style backtracking algorithm to solve Sudoku
+│   │   └── sudoku_converter.py          # Converts between board matrix and string/dictionary formats
+│   │
+│   └── utils/                           # utility scripts for main pipeline
 │
 ├── dev_tools/
 │   ├── data_utils/
@@ -144,10 +143,11 @@ the neural network to recognize digits in Sudoku puzzles.
    The `DigitDatasetGenerator` class allows you to customize the generation of images. You can specify:
    - `image_size`: The size (width and height) of each image (default is 32x32).
    - `output_dir`: The directory where the generated images will be saved.
-   - `num_samples`: The number of images to generate for each digit (default is 100).
+   - `num_samples`: The number of images to generate for each digit (default is 10000).
    - `clean_proportion`: The fraction of clean, unaltered images (0 to 1).
    - `blur_level`, `shift_range`, `rotation_range`, `noise_level`: Parameters that control the distortion applied to images (random Gaussian blur, pixel shifts, rotations, and noise).
    - `fonts_dir`: The directory containing `.ttf` or `.otf` font files used to render the digits.
+   - `font_sizes`: A list of font point sizes to randomly choose from when rendering digits (e.g. [24, 28, 32]), allowing variation in digit appearance.
 
 2. **Run Dataset Generation**
    
